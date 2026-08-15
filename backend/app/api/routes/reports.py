@@ -4,11 +4,16 @@ from fastapi import APIRouter, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from ...biomarkers import (
+    Biomarker,
     BiomarkerParseResult,
     BiomarkerTextRequest,
     parse_biomarkers,
 )
-from ...document_processing import PDFExtractionError, extract_pdf_text
+from ...document_processing import (
+    PDFExtractionError,
+    PDFExtractionResult,
+    extract_pdf_text,
+)
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -35,6 +40,50 @@ class ReportExtractionResponse(BaseModel):
     text_extracted: bool
     requires_ocr: bool
     text: str
+
+
+class ReportProcessingResponse(BaseModel):
+    filename: str
+    page_count: int
+    character_count: int
+    requires_ocr: bool
+    biomarker_count: int
+    unparsed_line_count: int
+    biomarkers: list[Biomarker]
+
+
+async def _read_pdf_upload(file: UploadFile) -> tuple[str, bytes]:
+    if file.content_type != "application/pdf":
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported file type. PDF files are required for extraction.",
+        )
+
+    filename = file.filename or ""
+    pdf_bytes = bytearray()
+
+    try:
+        while chunk := await file.read(READ_CHUNK_SIZE_BYTES):
+            pdf_bytes.extend(chunk)
+            if len(pdf_bytes) > MAX_UPLOAD_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    detail="File exceeds the maximum upload size of 10 MB.",
+                )
+    finally:
+        await file.close()
+
+    return filename, bytes(pdf_bytes)
+
+
+def _extract_pdf_or_422(pdf_bytes: bytes) -> PDFExtractionResult:
+    try:
+        return extract_pdf_text(pdf_bytes)
+    except PDFExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(
@@ -75,35 +124,11 @@ async def upload_report(file: UploadFile) -> ReportUploadResponse:
 
 @router.post("/extract", response_model=ReportExtractionResponse)
 async def extract_report(file: UploadFile) -> ReportExtractionResponse:
-    if file.content_type != "application/pdf":
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Unsupported file type. PDF files are required for extraction.",
-        )
-
-    pdf_bytes = bytearray()
-
-    try:
-        while chunk := await file.read(READ_CHUNK_SIZE_BYTES):
-            pdf_bytes.extend(chunk)
-            if len(pdf_bytes) > MAX_UPLOAD_SIZE_BYTES:
-                raise HTTPException(
-                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                    detail="File exceeds the maximum upload size of 10 MB.",
-                )
-    finally:
-        await file.close()
-
-    try:
-        extraction = extract_pdf_text(bytes(pdf_bytes))
-    except PDFExtractionError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=str(exc),
-        ) from exc
+    filename, pdf_bytes = await _read_pdf_upload(file)
+    extraction = _extract_pdf_or_422(pdf_bytes)
 
     return ReportExtractionResponse(
-        filename=file.filename or "",
+        filename=filename,
         page_count=extraction.page_count,
         character_count=extraction.character_count,
         text_extracted=extraction.has_meaningful_text,
@@ -115,3 +140,31 @@ async def extract_report(file: UploadFile) -> ReportExtractionResponse:
 @router.post("/biomarkers", response_model=BiomarkerParseResult)
 def extract_biomarkers(payload: BiomarkerTextRequest) -> BiomarkerParseResult:
     return parse_biomarkers(payload.text)
+
+
+@router.post("/process", response_model=ReportProcessingResponse)
+async def process_report(file: UploadFile) -> ReportProcessingResponse:
+    filename, pdf_bytes = await _read_pdf_upload(file)
+    extraction = _extract_pdf_or_422(pdf_bytes)
+
+    if not extraction.has_meaningful_text:
+        return ReportProcessingResponse(
+            filename=filename,
+            page_count=extraction.page_count,
+            character_count=extraction.character_count,
+            requires_ocr=True,
+            biomarker_count=0,
+            unparsed_line_count=0,
+            biomarkers=[],
+        )
+
+    parsed = parse_biomarkers(extraction.text)
+    return ReportProcessingResponse(
+        filename=filename,
+        page_count=extraction.page_count,
+        character_count=extraction.character_count,
+        requires_ocr=False,
+        biomarker_count=parsed.count,
+        unparsed_line_count=parsed.unparsed_line_count,
+        biomarkers=parsed.biomarkers,
+    )
