@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .api.routes.biomarkers import router as biomarkers_router
+from .api.routes.dashboard import router as dashboard_router
 from .api.routes.reports import router as reports_router
 from .db import initialize_database
 
@@ -21,6 +22,7 @@ app = FastAPI(
 
 app.include_router(reports_router)
 app.include_router(biomarkers_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/")

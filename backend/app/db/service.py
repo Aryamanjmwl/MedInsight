@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
@@ -32,6 +32,12 @@ class BiomarkerOverviewRecord:
     latest_status: str
     latest_report_date: datetime
     measurement_count: int
+
+
+@dataclass(frozen=True)
+class ReportStatistics:
+    total_reports: int
+    latest_report_date: datetime | None
 
 
 def save_processed_report(
@@ -157,3 +163,12 @@ def list_biomarker_overviews(session: Session) -> list[BiomarkerOverviewRecord]:
         replace(record, measurement_count=counts[normalized_name])
         for normalized_name, record in latest_by_name.items()
     ]
+
+
+def get_report_statistics(session: Session) -> ReportStatistics:
+    statement = select(func.count(Report.id), func.max(Report.uploaded_at))
+    total_reports, latest_report_date = session.execute(statement).one()
+    return ReportStatistics(
+        total_reports=total_reports,
+        latest_report_date=latest_report_date,
+    )

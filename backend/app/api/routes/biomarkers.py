@@ -10,6 +10,7 @@ from ...db import (
     get_db_session,
     list_biomarker_overviews,
 )
+from ...trends import TrendResult, calculate_trend
 
 router = APIRouter(prefix="/biomarkers", tags=["biomarkers"])
 
@@ -70,3 +71,12 @@ def biomarker_history(
         count=len(history),
         history=history,
     )
+
+
+@router.get("/{normalized_name}/trend", response_model=TrendResult)
+def biomarker_trend(
+    normalized_name: str,
+    session: Session = Depends(get_db_session),
+) -> TrendResult:
+    records = get_biomarker_history(session, normalized_name)
+    return calculate_trend(normalized_name, records)
