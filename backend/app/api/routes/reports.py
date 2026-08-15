@@ -3,6 +3,11 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
+from ...biomarkers import (
+    BiomarkerParseResult,
+    BiomarkerTextRequest,
+    parse_biomarkers,
+)
 from ...document_processing import PDFExtractionError, extract_pdf_text
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -105,3 +110,8 @@ async def extract_report(file: UploadFile) -> ReportExtractionResponse:
         requires_ocr=not extraction.has_meaningful_text,
         text=extraction.text,
     )
+
+
+@router.post("/biomarkers", response_model=BiomarkerParseResult)
+def extract_biomarkers(payload: BiomarkerTextRequest) -> BiomarkerParseResult:
+    return parse_biomarkers(payload.text)
