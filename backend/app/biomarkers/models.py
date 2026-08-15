@@ -1,8 +1,16 @@
+from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel
 
 ReferenceOperator = Literal["<", "<=", ">", ">="]
+
+
+class BiomarkerStatus(str, Enum):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+    UNKNOWN = "unknown"
 
 
 class Biomarker(BaseModel):
@@ -15,6 +23,7 @@ class Biomarker(BaseModel):
     reference_operator: ReferenceOperator | None
     raw_reference: str
     source_text: str
+    status: BiomarkerStatus = BiomarkerStatus.UNKNOWN
 
 
 class BiomarkerTextRequest(BaseModel):

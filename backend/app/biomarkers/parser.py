@@ -1,6 +1,7 @@
 import re
 from typing import cast
 
+from .classification import classify_biomarker_value
 from .models import Biomarker, BiomarkerParseResult, ReferenceOperator
 
 NORMALIZED_TEST_NAMES = {
@@ -51,6 +52,10 @@ def parse_biomarkers(text: str) -> BiomarkerParseResult:
         limit = match.group("limit")
         low = match.group("low")
         high = match.group("high")
+        value = float(match.group("value"))
+        reference_operator = (
+            cast(ReferenceOperator, operator) if operator is not None else None
+        )
 
         reference_low = float(low) if low is not None else None
         reference_high = float(high) if high is not None else None
@@ -63,17 +68,19 @@ def parse_biomarkers(text: str) -> BiomarkerParseResult:
             Biomarker(
                 test_name=test_name,
                 normalized_name=NORMALIZED_TEST_NAMES[normalized_lookup_name],
-                value=float(match.group("value")),
+                value=value,
                 unit=match.group("unit"),
                 reference_low=reference_low,
                 reference_high=reference_high,
-                reference_operator=(
-                    cast(ReferenceOperator, operator)
-                    if operator is not None
-                    else None
-                ),
+                reference_operator=reference_operator,
                 raw_reference=match.group("reference"),
                 source_text=source_line,
+                status=classify_biomarker_value(
+                    value=value,
+                    reference_low=reference_low,
+                    reference_high=reference_high,
+                    reference_operator=reference_operator,
+                ),
             )
         )
 
