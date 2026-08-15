@@ -38,6 +38,7 @@ desktop.ini
 *.db
 *.sqlite
 *.sqlite3
+/backend/data/
 
 # User-uploaded medical data
 uploads/

@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 ReferenceOperator = Literal["<", "<=", ">", ">="]
 
@@ -14,6 +14,8 @@ class BiomarkerStatus(str, Enum):
 
 
 class Biomarker(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     test_name: str
     normalized_name: str
     value: float

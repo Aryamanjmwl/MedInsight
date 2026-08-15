@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from ...biomarkers import (
     Biomarker,
@@ -13,6 +15,14 @@ from ...document_processing import (
     PDFExtractionError,
     PDFExtractionResult,
     extract_pdf_text,
+)
+from ...db import (
+    BiomarkerResult,
+    Report,
+    get_db_session,
+    get_saved_report,
+    list_saved_reports,
+    save_processed_report,
 )
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -49,6 +59,25 @@ class ReportProcessingResponse(BaseModel):
     requires_ocr: bool
     biomarker_count: int
     unparsed_line_count: int
+    biomarkers: list[Biomarker]
+
+
+class ProcessAndSaveResponse(BaseModel):
+    report_id: int
+    result: ReportProcessingResponse
+
+
+class SavedReportSummary(BaseModel):
+    id: int
+    filename: str
+    uploaded_at: datetime
+    page_count: int
+    character_count: int
+    requires_ocr: bool
+    biomarker_count: int
+
+
+class SavedReportDetail(SavedReportSummary):
     biomarkers: list[Biomarker]
 
 
@@ -167,4 +196,62 @@ async def process_report(file: UploadFile) -> ReportProcessingResponse:
         biomarker_count=parsed.count,
         unparsed_line_count=parsed.unparsed_line_count,
         biomarkers=parsed.biomarkers,
+    )
+
+
+def _stored_biomarker(record: BiomarkerResult) -> Biomarker:
+    return Biomarker.model_validate(record)
+
+
+def _report_summary(report: Report) -> SavedReportSummary:
+    return SavedReportSummary(
+        id=report.id,
+        filename=report.filename,
+        uploaded_at=report.uploaded_at,
+        page_count=report.page_count,
+        character_count=report.character_count,
+        requires_ocr=report.requires_ocr,
+        biomarker_count=len(report.biomarkers),
+    )
+
+
+@router.post("/process-and-save", response_model=ProcessAndSaveResponse)
+async def process_and_save_report(
+    file: UploadFile,
+    session: Session = Depends(get_db_session),
+) -> ProcessAndSaveResponse:
+    result = await process_report(file)
+    report = save_processed_report(
+        session,
+        filename=result.filename,
+        page_count=result.page_count,
+        character_count=result.character_count,
+        requires_ocr=result.requires_ocr,
+        biomarkers=result.biomarkers,
+    )
+    return ProcessAndSaveResponse(report_id=report.id, result=result)
+
+
+@router.get("", response_model=list[SavedReportSummary])
+def get_reports(
+    session: Session = Depends(get_db_session),
+) -> list[SavedReportSummary]:
+    return [_report_summary(report) for report in list_saved_reports(session)]
+
+
+@router.get("/{report_id}", response_model=SavedReportDetail)
+def get_report(
+    report_id: int,
+    session: Session = Depends(get_db_session),
+) -> SavedReportDetail:
+    report = get_saved_report(session, report_id)
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not found.",
+        )
+
+    return SavedReportDetail(
+        **_report_summary(report).model_dump(),
+        biomarkers=[_stored_biomarker(item) for item in report.biomarkers],
     )
