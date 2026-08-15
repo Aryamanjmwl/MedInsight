@@ -4,6 +4,7 @@ from .models import (
     BiomarkerParseResult,
     BiomarkerStatus,
     BiomarkerTextRequest,
+    ReferenceOperator,
 )
 from .parser import parse_biomarkers
 
@@ -12,6 +13,7 @@ __all__ = [
     "BiomarkerParseResult",
     "BiomarkerStatus",
     "BiomarkerTextRequest",
+    "ReferenceOperator",
     "classify_biomarker_value",
     "parse_biomarkers",
 ]
