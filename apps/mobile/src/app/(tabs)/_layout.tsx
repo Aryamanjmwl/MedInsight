@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, View, type ColorValue } from 'react-native';
 
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { colors, layout, radii, typography } from '@/theme';
 
 type TabIconProps = {
@@ -25,8 +26,10 @@ function TabIcon({ label, color, focused }: TabIconProps) {
 }
 
 export default function TabsLayout() {
+  const { isDesktop } = useResponsiveLayout();
   return (
     <Tabs
+      tabBar={isDesktop ? () => null : undefined}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand,

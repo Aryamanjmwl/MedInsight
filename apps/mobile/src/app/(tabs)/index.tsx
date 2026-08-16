@@ -1,85 +1,48 @@
 import { StyleSheet, View } from 'react-native';
 
-import { BiomarkerRow } from '@/components/biomarker-row';
-import { PageHeader } from '@/components/page-header';
-import { ReportCard } from '@/components/report-card';
+import { BiomarkerExplorer } from '@/components/biomarker-explorer';
+import { HealthTimeline } from '@/components/health-timeline';
+import { LatestMeasurements } from '@/components/latest-measurements';
+import { LatestReportPanel } from '@/components/latest-report-panel';
+import { NeedsAttention } from '@/components/needs-attention';
+import { RecordHeader } from '@/components/record-header';
 import { Screen } from '@/components/screen';
-import { SectionHeader } from '@/components/section-header';
-import { SummaryCard } from '@/components/summary-card';
-import { TrendPlaceholder } from '@/components/trend-placeholder';
-import { biomarkers, reports, summaryMetrics } from '@/data/mock-data';
-import { colors, radii, spacing } from '@/theme';
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
+import { layout, spacing } from '@/theme';
 
 export default function DashboardScreen() {
+  const { isDesktop } = useResponsiveLayout();
   return (
     <Screen>
-      <PageHeader
-        eyebrow="Health overview"
-        title="MedInsight"
-        description="A clear view of your laboratory report history and the results that may need attention."
-      />
-
-      <View style={styles.summaryGrid}>
-        {summaryMetrics.map((metric) => (
-          <SummaryCard key={metric.label} {...metric} />
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader
-          title="Needs Attention"
-          supportingText="Based only on the reference ranges printed in your reports"
-        />
-        <View style={styles.surfaceList}>
-          {biomarkers
-            .filter((item) => item.status !== 'normal')
-            .map((item) => (
-              <BiomarkerRow key={item.id} biomarker={item} />
-            ))}
+      <RecordHeader />
+      {isDesktop ? (
+        <View style={styles.desktopGrid}>
+          <View style={styles.mainColumn}>
+            <LatestReportPanel />
+            <BiomarkerExplorer />
+            <HealthTimeline />
+          </View>
+          <View style={styles.supportingRail}>
+            <NeedsAttention />
+            <LatestMeasurements />
+          </View>
         </View>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader title="Recent Biomarkers" supportingText="Latest reported measurements" />
-        <View style={styles.surfaceList}>
-          {biomarkers.slice(0, 3).map((item) => (
-            <BiomarkerRow key={item.id} biomarker={item} />
-          ))}
+      ) : (
+        <View style={styles.mobileFlow}>
+          <LatestReportPanel />
+          <BiomarkerExplorer />
+          <NeedsAttention />
+          <LatestMeasurements />
+          <HealthTimeline />
         </View>
-      </View>
-
-      <TrendPlaceholder />
-
-      <View style={styles.section}>
-        <SectionHeader title="Recent Reports" supportingText="Recently processed documents" />
-        <View style={styles.reportList}>
-          {reports.slice(0, 2).map((report) => (
-            <ReportCard key={report.id} report={report} />
-          ))}
-        </View>
-      </View>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  section: {
-    gap: spacing.md,
-  },
-  surfaceList: {
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
-  },
-  reportList: {
-    gap: spacing.md,
-  },
+  desktopGrid: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xl },
+  mainColumn: { flex: 1, minWidth: 0, gap: spacing.lg },
+  supportingRail: { width: layout.supportingRailWidth, gap: spacing.lg },
+  mobileFlow: { width: '100%', minWidth: 0, gap: spacing.xl },
 });

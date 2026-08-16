@@ -12,31 +12,31 @@ export default function SettingsScreen() {
     <Screen>
       <PageHeader
         title="Settings"
-        description="Application preferences and account controls will be configured here in later stages."
+        description="Manage application preferences and local data presentation."
       />
       <View style={styles.section}>
         <SectionHeader title="Application" />
         <View style={styles.list}>
           <SettingsRow
             title="Appearance"
-            description="MedInsight currently uses its light healthcare theme."
+            description="Warm light appearance with accessible contrast."
             value="Light"
           />
           <SettingsRow
-            title="Data source"
-            description="Backend connectivity has not been configured."
-            value="Mock data"
+            title="Data presentation"
+            description="Measurements use the units printed in each report."
+            value="Report units"
           />
           <SettingsRow
             title="Notifications"
-            description="Report and biomarker notifications are not enabled."
+            description="Report and biomarker notifications."
             value="Off"
           />
         </View>
       </View>
       <View style={styles.notice}>
         <AppText variant="label" color="textSecondary">
-          MEDINSIGHT MOBILE · FOUNDATION
+          MEDINSIGHT MOBILE
         </AppText>
         <AppText variant="caption" color="textMuted">
           This interface does not provide medical advice or diagnosis.

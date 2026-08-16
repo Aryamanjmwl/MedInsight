@@ -1,35 +1,49 @@
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
 import { BiomarkerRow } from '@/components/biomarker-row';
 import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
-import { SectionHeader } from '@/components/section-header';
-import { biomarkers } from '@/data/mock-data';
+import { biomarkers, type BiomarkerStatus } from '@/data/mock-data';
 import { colors, radii, spacing } from '@/theme';
 
+type Filter = 'all' | 'attention' | 'normal';
+const filters: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'attention', label: 'Needs attention' },
+  { id: 'normal', label: 'In range' },
+];
+
+function matchesFilter(status: BiomarkerStatus, filter: Filter) {
+  if (filter === 'attention') return status !== 'normal';
+  if (filter === 'normal') return status === 'normal';
+  return true;
+}
+
 export default function BiomarkersScreen() {
+  const [filter, setFilter] = useState<Filter>('all');
+  const visibleBiomarkers = biomarkers.filter(({ status }) => matchesFilter(status, filter));
   return (
     <Screen>
-      <PageHeader
-        title="Biomarkers"
-        description="Review the latest values from your saved reports. Trends will remain purely mathematical."
-      />
-      <View style={styles.contextCard}>
-        <AppText variant="bodyStrong">Mock overview</AppText>
-        <AppText color="textSecondary">
-          Values shown in this shell are placeholders and are not connected to your backend.
-        </AppText>
-      </View>
+      <PageHeader title="Biomarkers" description="Latest measurements and changes across your laboratory reports." />
       <View style={styles.section}>
-        <SectionHeader
-          title="Latest measurements"
-          supportingText={`${biomarkers.length} biomarkers shown`}
-        />
+        <View style={styles.sectionHeader}>
+          <AppText variant="metadata" color="textMuted">Latest Measurements</AppText>
+          <AppText variant="caption" color="textMuted">{visibleBiomarkers.length} shown</AppText>
+        </View>
+        <View accessibilityRole="tablist" style={styles.filters}>
+          {filters.map((item) => {
+            const active = filter === item.id;
+            return (
+              <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: active }} onPress={() => setFilter(item.id)} style={[styles.filter, active && styles.activeFilter]}>
+                <AppText variant="label" color={active ? 'textPrimary' : 'textMuted'}>{item.label}</AppText>
+              </Pressable>
+            );
+          })}
+        </View>
         <View style={styles.list}>
-          {biomarkers.map((item) => (
-            <BiomarkerRow key={item.id} biomarker={item} />
-          ))}
+          {visibleBiomarkers.map((item) => <BiomarkerRow key={item.id} biomarker={item} />)}
         </View>
       </View>
     </Screen>
@@ -37,19 +51,10 @@ export default function BiomarkersScreen() {
 }
 
 const styles = StyleSheet.create({
-  contextCard: {
-    gap: spacing.xs,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: colors.brandMuted,
-  },
   section: { gap: spacing.md },
-  list: {
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
-  },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: colors.border },
+  filter: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spacing.md, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  activeFilter: { borderBottomColor: colors.textPrimary },
+  list: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface, overflow: 'hidden' },
 });

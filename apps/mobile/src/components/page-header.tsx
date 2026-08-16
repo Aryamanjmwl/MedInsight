@@ -13,7 +13,7 @@ export function PageHeader({ title, description, eyebrow }: PageHeaderProps) {
   return (
     <View style={styles.container}>
       {eyebrow ? (
-        <AppText variant="label" color="brand">
+        <AppText variant="metadata" color="textMuted">
           {eyebrow.toUpperCase()}
         </AppText>
       ) : null}
@@ -28,7 +28,8 @@ export function PageHeader({ title, description, eyebrow }: PageHeaderProps) {
 const styles = StyleSheet.create({
   container: {
     gap: spacing.sm,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.sm,
   },
   description: {
     maxWidth: 600,

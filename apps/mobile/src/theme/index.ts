@@ -1,83 +1,33 @@
 export const colors = {
-  background: '#F5F7F7',
-  surface: '#FFFFFF',
-  surfaceMuted: '#EEF2F1',
-  border: '#DDE5E3',
-  borderStrong: '#C6D3D0',
-  textPrimary: '#172321',
-  textSecondary: '#5D6B68',
-  textMuted: '#7C8986',
-  brand: '#176B5B',
-  brandStrong: '#105347',
-  brandMuted: '#E3F0ED',
-  statusNormal: '#287A5D',
-  statusNormalMuted: '#E4F2EC',
-  statusHigh: '#A6443A',
-  statusHighMuted: '#F8E8E5',
-  statusLow: '#996515',
-  statusLowMuted: '#FAEFD9',
-  focus: '#3B8275',
-  white: '#FFFFFF',
+  background: '#EDEAE5', surface: '#FAFAF8', surfaceMuted: '#F4F1ED', surfaceSubtle: '#F7F5F2',
+  border: '#E2DDD8', borderSubtle: '#EDEBE7', borderStrong: '#C9C2BB',
+  textPrimary: '#1A1714', textSecondary: '#4A4542', textMuted: '#7A7672', textFaint: '#A39D97',
+  brand: '#2B4870', brandStrong: '#203957', brandMuted: '#EDF1F7',
+  statusNormal: '#4A4542', statusNormalMuted: '#F4F1ED',
+  statusHigh: '#922030', statusHighMuted: '#F6ECEE',
+  statusLow: '#94651A', statusLowMuted: '#F6F0E4', focus: '#496A93', white: '#FFFFFF',
 } as const;
 
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-  xxxl: 40,
-} as const;
-
-export const radii = {
-  sm: 8,
-  md: 12,
-  lg: 18,
-  pill: 999,
-} as const;
+export const spacing = { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 40, huge: 56 } as const;
+export const radii = { xs: 4, sm: 6, md: 8, lg: 10, pill: 999 } as const;
 
 export const typography = {
-  display: {
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '700' as const,
-    letterSpacing: -0.6,
-  },
-  title: {
-    fontSize: 24,
-    lineHeight: 31,
-    fontWeight: '700' as const,
-    letterSpacing: -0.3,
-  },
-  section: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '700' as const,
-  },
-  body: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '400' as const,
-  },
-  bodyStrong: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '600' as const,
-  },
-  label: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '600' as const,
-  },
-  caption: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '500' as const,
-  },
+  display: { fontSize: 34, lineHeight: 40, fontWeight: '500' as const, letterSpacing: -0.7 },
+  title: { fontSize: 25, lineHeight: 32, fontWeight: '500' as const, letterSpacing: -0.35 },
+  value: { fontSize: 44, lineHeight: 48, fontWeight: '500' as const, letterSpacing: -1 },
+  section: { fontSize: 17, lineHeight: 23, fontWeight: '500' as const },
+  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' as const },
+  bodyStrong: { fontSize: 15, lineHeight: 22, fontWeight: '600' as const },
+  label: { fontSize: 12, lineHeight: 17, fontWeight: '500' as const, letterSpacing: 0.2 },
+  metadata: { fontSize: 11, lineHeight: 16, fontWeight: '500' as const, letterSpacing: 1.2, textTransform: 'uppercase' as const },
+  caption: { fontSize: 12, lineHeight: 17, fontWeight: '400' as const },
 } as const;
 
+export const breakpoints = { compact: 640, desktop: 1024 } as const;
 export const layout = {
-  contentMaxWidth: 960,
+  contentMaxWidth: 1240,
+  supportingRailWidth: 360,
+  desktopGutter: 40,
+  mobileGutter: 16,
   tabIconSize: 24,
 } as const;

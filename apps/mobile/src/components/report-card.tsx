@@ -8,7 +8,7 @@ export function ReportCard({ report }: { report: MockReport }) {
   const attentionText =
     report.needsAttention > 0
       ? `${report.needsAttention} outside range`
-      : 'All results in range';
+      : 'No values outside range';
 
   return (
     <View style={styles.card}>
@@ -26,7 +26,7 @@ export function ReportCard({ report }: { report: MockReport }) {
       </View>
       <AppText
         variant="caption"
-        color={report.needsAttention > 0 ? 'statusHigh' : 'statusNormal'}
+        color={report.needsAttention > 0 ? 'statusHigh' : 'textMuted'}
         style={styles.status}>
         {attentionText}
       </AppText>
@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     backgroundColor: colors.surface,
   },
   documentMark: {
@@ -52,12 +52,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
-    backgroundColor: colors.brandMuted,
+    backgroundColor: colors.surfaceMuted,
   },
   documentLine: {
     height: 2,
     borderRadius: radii.pill,
-    backgroundColor: colors.brand,
+    backgroundColor: colors.textMuted,
   },
   shortLine: {
     width: '65%',
