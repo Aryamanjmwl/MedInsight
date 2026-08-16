@@ -18,6 +18,16 @@ Cross-platform MedInsight client shell built with Expo, React Native, TypeScript
 
 Use `npm run android`, `npm run ios` (macOS required), or `npm run web` for a target platform.
 
+## API configuration
+
+Copy `.env.example` to a local environment file and set `EXPO_PUBLIC_API_URL` to the backend base URL. For local web development, the example value is:
+
+```text
+EXPO_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+The web client falls back to this local URL when the variable is omitted. Native clients require an explicit URL because `127.0.0.1` may refer to the emulator or device itself. `EXPO_PUBLIC_*` variables are included in the public client bundle, so never store secrets, tokens, keys, or credentials in them.
+
 ## Validation
 
 ```bash
@@ -31,6 +41,6 @@ npx expo export --platform web
 - Dashboard, reports, biomarkers, and settings routes
 - Mobile bottom-tab navigation
 - Responsive web support
-- Mock data only
+- Mock data remains active in screens; typed backend client modules are available for later integration
 
-Backend connectivity, authentication, charting, and AI features are intentionally not included yet.
+Screen-level backend integration, authentication, charting dependencies, and AI features are intentionally not included yet.
