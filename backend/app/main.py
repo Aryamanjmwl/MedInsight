@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from .api.routes.biomarkers import router as biomarkers_router
 from .api.routes.dashboard import router as dashboard_router
 from .api.routes.reports import router as reports_router
+from .cors import configure_cors
 from .db import initialize_database
 
 
@@ -19,6 +20,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+configure_cors(app)
 
 app.include_router(reports_router)
 app.include_router(biomarkers_router)
