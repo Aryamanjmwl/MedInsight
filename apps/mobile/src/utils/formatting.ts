@@ -27,6 +27,14 @@ const monthHeaderFormatter = new Intl.DateTimeFormat('en-GB', {
 
 const dayFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', timeZone: 'UTC' });
 
+const dayMonthFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  timeZone: 'UTC',
+});
+
+const yearFormatter = new Intl.DateTimeFormat('en-GB', { year: 'numeric', timeZone: 'UTC' });
+
 export function formatFullDate(value: string) {
   const date = parseApiDate(value);
   return date ? fullDateFormatter.format(date) : 'Date unavailable';
@@ -45,6 +53,16 @@ export function formatMonthHeader(value: string) {
 export function formatDay(value: string) {
   const date = parseApiDate(value);
   return date ? dayFormatter.format(date) : '—';
+}
+
+export function formatDayMonth(value: string) {
+  const date = parseApiDate(value);
+  return date ? dayMonthFormatter.format(date).toUpperCase() : 'DATE N/A';
+}
+
+export function formatYear(value: string) {
+  const date = parseApiDate(value);
+  return date ? yearFormatter.format(date) : 'Date unavailable';
 }
 
 export function formatValue(value: number) {
