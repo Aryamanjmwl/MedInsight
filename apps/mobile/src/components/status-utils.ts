@@ -11,6 +11,12 @@ export function getStatusLabel(status: BiomarkerStatus) {
   return status === 'normal' ? '—' : status.toUpperCase();
 }
 
+export function getBiomarkerStatusLabel(status: BiomarkerStatus) {
+  if (status === 'normal') return 'IN RANGE';
+  if (status === 'unknown') return 'REFERENCE UNKNOWN';
+  return status.toUpperCase();
+}
+
 export function getTrendSymbol(trend?: TrendDirection | 'up' | 'down') {
   if (trend === 'up' || trend === 'increasing') return '↑';
   if (trend === 'down' || trend === 'decreasing') return '↓';

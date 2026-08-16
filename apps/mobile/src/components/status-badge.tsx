@@ -1,13 +1,14 @@
 import { StyleSheet, View } from 'react-native';
 
+import type { BiomarkerStatus } from '@/api';
 import { AppText } from '@/components/app-text';
-import type { BiomarkerStatus } from '@/data/mock-data';
 import { colors, radii, spacing } from '@/theme';
 
 const statusStyles = {
   normal: { label: 'In range', text: colors.textMuted },
   high: { label: 'High', text: colors.statusHigh },
   low: { label: 'Low', text: colors.statusLow },
+  unknown: { label: 'Reference unknown', text: colors.textMuted },
 };
 
 export function StatusBadge({ status }: { status: BiomarkerStatus }) {

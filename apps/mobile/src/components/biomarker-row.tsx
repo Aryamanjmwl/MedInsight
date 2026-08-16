@@ -1,30 +1,43 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import type { BiomarkerOverview } from '@/api';
 import { AppText } from '@/components/app-text';
-import { getStatusColor, getStatusLabel, getTrendSymbol } from '@/components/status-utils';
-import type { MockBiomarker } from '@/data/mock-data';
+import { getBiomarkerStatusLabel, getStatusColor } from '@/components/status-utils';
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { colors, spacing } from '@/theme';
+import { formatFullDate, formatValue } from '@/utils/formatting';
 
-export function BiomarkerRow({ biomarker }: { biomarker: MockBiomarker }) {
-  const statusColor = getStatusColor(biomarker.status);
+type BiomarkerRowProps = {
+  biomarker: BiomarkerOverview;
+  selected: boolean;
+  onPress: () => void;
+};
+
+export function BiomarkerRow({ biomarker, selected, onPress }: BiomarkerRowProps) {
+  const { isCompact } = useResponsiveLayout();
+  const statusColor = getStatusColor(biomarker.latest_status);
+  const statusLabel = getBiomarkerStatusLabel(biomarker.latest_status);
+
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${biomarker.name}, ${biomarker.value} ${biomarker.unit}, ${getStatusLabel(biomarker.status)}, ${biomarker.change}`}
-      style={({ pressed, hovered }) => [styles.row, (pressed || hovered) && styles.rowActive]}>
-      <View style={styles.primaryRow}>
-        <AppText variant="bodyStrong" style={styles.name}>{biomarker.name}</AppText>
-        <AppText variant="section" style={[styles.value, { color: biomarker.status === 'normal' ? colors.textPrimary : statusColor }]}>
-          {biomarker.value} <AppText variant="caption" color="textMuted">{biomarker.unit}</AppText>
+      accessibilityLabel={`${selected ? 'Close' : 'Open'} ${biomarker.test_name}, ${formatValue(biomarker.latest_value)} ${biomarker.latest_unit}, ${statusLabel}, ${biomarker.measurement_count} recorded measurements`}
+      accessibilityState={{ expanded: selected }}
+      onPress={onPress}
+      style={({ pressed, hovered }) => [styles.row, selected && styles.selectedRow, (pressed || hovered) && styles.rowActive]}>
+      <View style={[styles.primaryRow, isCompact && styles.compactRow]}>
+        <AppText variant="bodyStrong" style={styles.name}>{biomarker.test_name}</AppText>
+        <AppText variant="section" style={[styles.value, { color: biomarker.latest_status === 'normal' || biomarker.latest_status === 'unknown' ? colors.textPrimary : statusColor }]}>
+          {formatValue(biomarker.latest_value)} <AppText variant="caption" color="textMuted">{biomarker.latest_unit}</AppText>
         </AppText>
       </View>
-      <View style={styles.secondaryRow}>
-        <AppText variant="caption" color="textMuted" style={styles.updated}>Updated {biomarker.date}</AppText>
-        <AppText variant="metadata" style={{ color: statusColor }}>{biomarker.status === 'normal' ? 'IN RANGE' : getStatusLabel(biomarker.status)}</AppText>
+      <View style={[styles.secondaryRow, isCompact && styles.compactRow]}>
+        <AppText variant="caption" color="textMuted" style={styles.updated}>Updated {formatFullDate(biomarker.latest_report_date)}</AppText>
+        <AppText variant="metadata" style={{ color: statusColor }}>{statusLabel}</AppText>
       </View>
-      <View style={styles.changeRow}>
-        <AppText variant="caption" color="textSecondary" style={styles.change}>{biomarker.change}</AppText>
-        <AppText variant="section" style={{ color: statusColor }}>{getTrendSymbol(biomarker.trend)}</AppText>
+      <View style={styles.detailCueRow}>
+        <AppText variant="caption" color="textSecondary" style={styles.measurements}>{biomarker.measurement_count} recorded {biomarker.measurement_count === 1 ? 'measurement' : 'measurements'}</AppText>
+        <AppText variant="label" color="brand">{selected ? 'Close ↑' : 'History →'}</AppText>
       </View>
     </Pressable>
   );
@@ -32,10 +45,11 @@ export function BiomarkerRow({ biomarker }: { biomarker: MockBiomarker }) {
 
 const styles = StyleSheet.create({
   row: { gap: spacing.sm, paddingVertical: spacing.lg, paddingHorizontal: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
-  rowActive: { backgroundColor: colors.surfaceMuted },
+  selectedRow: { backgroundColor: colors.surfaceSubtle }, rowActive: { backgroundColor: colors.surfaceMuted },
   primaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
   secondaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
-  changeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  name: { flex: 1 }, value: { textAlign: 'right', fontVariant: ['tabular-nums'] },
-  updated: { flex: 1 }, change: { flex: 1, fontVariant: ['tabular-nums'] },
+  compactRow: { alignItems: 'flex-start', flexDirection: 'column', gap: spacing.xs },
+  detailCueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  name: { flex: 1, minWidth: 0 }, value: { textAlign: 'right', fontVariant: ['tabular-nums'] },
+  updated: { flex: 1 }, measurements: { flex: 1, fontVariant: ['tabular-nums'] },
 });

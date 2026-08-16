@@ -1,4 +1,11 @@
-import type { TrendDirection } from '@/api';
+import type { ReferenceOperator, TrendDirection } from '@/api';
+
+type ReferenceFields = {
+  raw_reference: string;
+  reference_low: number | null;
+  reference_high: number | null;
+  reference_operator: ReferenceOperator | null;
+};
 
 function parseApiDate(value: string) {
   const hasTimeZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
@@ -72,6 +79,24 @@ export function formatValue(value: number) {
 export function formatSignedValue(value: number, suffix = '') {
   const sign = value > 0 ? '+' : '';
   return `${sign}${formatValue(value)}${suffix}`;
+}
+
+export function formatReference(reference: ReferenceFields) {
+  const rawReference = reference.raw_reference.trim();
+  if (rawReference) return rawReference;
+
+  if (reference.reference_low !== null && reference.reference_high !== null) {
+    return `${formatValue(reference.reference_low)}–${formatValue(reference.reference_high)}`;
+  }
+
+  if (reference.reference_operator) {
+    const threshold = reference.reference_operator.startsWith('<')
+      ? reference.reference_high
+      : reference.reference_low;
+    if (threshold !== null) return `${reference.reference_operator}${formatValue(threshold)}`;
+  }
+
+  return null;
 }
 
 export function getTrendArrow(direction: TrendDirection) {
