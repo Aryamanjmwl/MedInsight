@@ -1,4 +1,4 @@
-import type { BiomarkerStatus } from '@/data/mock-data';
+import type { BiomarkerStatus, TrendDirection } from '@/api';
 import { colors } from '@/theme';
 
 export function getStatusColor(status: BiomarkerStatus) {
@@ -11,9 +11,9 @@ export function getStatusLabel(status: BiomarkerStatus) {
   return status === 'normal' ? '—' : status.toUpperCase();
 }
 
-export function getTrendSymbol(trend?: 'up' | 'down' | 'stable') {
-  if (trend === 'up') return '↑';
-  if (trend === 'down') return '↓';
+export function getTrendSymbol(trend?: TrendDirection | 'up' | 'down') {
+  if (trend === 'up' || trend === 'increasing') return '↑';
+  if (trend === 'down' || trend === 'decreasing') return '↓';
   if (trend === 'stable') return '→';
   return '—';
 }

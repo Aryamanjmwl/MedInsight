@@ -2,92 +2,60 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { AppText } from '@/components/app-text';
-import type { TrendMeasurement } from '@/data/mock-data';
 import { colors, radii, spacing } from '@/theme';
 
-type TrendTrackProps = {
-  measurements: TrendMeasurement[];
-  unit: string;
-  color: string;
-  reference: string;
-  referenceMarkers: number[];
-};
+export type TrendPoint = { key: string; label: string; value: number };
 
-const PLOT_HEIGHT = 190;
-const CHART_TOP = 32;
-const CHART_BOTTOM = 140;
-const HORIZONTAL_PADDING = 34;
+type TrendTrackProps = { points: TrendPoint[]; unit: string; color: string };
 
-export function TrendTrack({ measurements, unit, color, reference, referenceMarkers }: TrendTrackProps) {
+const PLOT_HEIGHT = 170;
+const CHART_TOP = 34;
+const CHART_BOTTOM = 118;
+const HORIZONTAL_PADDING = 42;
+
+export function TrendTrack({ points, unit, color }: TrendTrackProps) {
   const [plotWidth, setPlotWidth] = useState(0);
   const domain = useMemo(() => {
-    const values = [...measurements.map(({ value }) => value), ...referenceMarkers];
+    const values = points.map(({ value }) => value);
     const rawMin = Math.min(...values);
     const rawMax = Math.max(...values);
-    const span = rawMax - rawMin || Math.max(Math.abs(rawMax), 1);
-    return { min: rawMin - span * 0.12, max: rawMax + span * 0.12 };
-  }, [measurements, referenceMarkers]);
+    const span = rawMax - rawMin || Math.max(Math.abs(rawMax) * 0.1, 1);
+    return { min: rawMin - span * 0.18, max: rawMax + span * 0.18 };
+  }, [points]);
 
   const xForIndex = (index: number) => {
     const usableWidth = Math.max(plotWidth - HORIZONTAL_PADDING * 2, 0);
-    return HORIZONTAL_PADDING + (usableWidth * index) / Math.max(measurements.length - 1, 1);
+    return HORIZONTAL_PADDING + (usableWidth * index) / Math.max(points.length - 1, 1);
   };
   const yForValue = (value: number) => {
     const ratio = (value - domain.min) / (domain.max - domain.min);
     return CHART_BOTTOM - ratio * (CHART_BOTTOM - CHART_TOP);
   };
-
-  const points = measurements.map((measurement, index) => ({
-    ...measurement,
-    x: xForIndex(index),
-    y: yForValue(measurement.value),
-  }));
+  const plottedPoints = points.map((point, index) => ({ ...point, x: xForIndex(index), y: yForValue(point.value) }));
 
   return (
     <View
-      accessibilityLabel={`Trend from ${measurements[0].value} to ${measurements[measurements.length - 1].value} ${unit}. Laboratory reference ${reference}.`}
+      accessibilityLabel={`Trend from ${points[0].value} to ${points[points.length - 1].value} ${unit}.`}
       onLayout={(event: LayoutChangeEvent) => setPlotWidth(event.nativeEvent.layout.width)}
       style={styles.plot}>
-      {[CHART_TOP, (CHART_TOP + CHART_BOTTOM) / 2, CHART_BOTTOM].map((top) => (
-        <View key={top} style={[styles.gridLine, { top }]} />
-      ))}
+      {[CHART_TOP, (CHART_TOP + CHART_BOTTOM) / 2, CHART_BOTTOM].map((top) => <View key={top} style={[styles.gridLine, { top }]} />)}
 
-      {plotWidth > 0 ? referenceMarkers.map((marker, index) => {
-        const top = yForValue(marker);
-        return (
-          <View key={`${marker}-${index}`} style={[styles.referenceLine, { top }]}>
-            {index === 0 ? <AppText variant="caption" color="textFaint" style={styles.referenceLabel}>Lab reference {reference}</AppText> : null}
-          </View>
-        );
-      }) : null}
-
-      {plotWidth > 0 ? points.slice(0, -1).map((point, index) => {
-        const next = points[index + 1];
+      {plotWidth > 0 ? plottedPoints.slice(0, -1).map((point, index) => {
+        const next = plottedPoints[index + 1];
         const deltaX = next.x - point.x;
         const deltaY = next.y - point.y;
         const length = Math.sqrt(deltaX ** 2 + deltaY ** 2);
         const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        return (
-          <View
-            key={`${point.date}-${next.date}`}
-            style={[styles.segment, {
-              left: (point.x + next.x) / 2 - length / 2,
-              top: (point.y + next.y) / 2,
-              width: length,
-              backgroundColor: color,
-              transform: [{ rotate: `${angle}deg` }],
-            }]}
-          />
-        );
+        return <View key={`${point.key}-${next.key}`} style={[styles.segment, { left: (point.x + next.x) / 2 - length / 2, top: (point.y + next.y) / 2, width: length, backgroundColor: color, transform: [{ rotate: `${angle}deg` }] }]} />;
       }) : null}
 
-      {plotWidth > 0 ? points.map((point, index) => {
-        const latest = index === points.length - 1;
+      {plotWidth > 0 ? plottedPoints.map((point, index) => {
+        const latest = index === plottedPoints.length - 1;
         return (
-          <View key={point.date}>
-            <AppText variant="label" style={[styles.pointValue, { left: point.x - 30, top: point.y - 28, color: latest ? color : colors.textSecondary }, latest && styles.latestValue]}>{point.value}</AppText>
+          <View key={point.key}>
+            <AppText variant="label" style={[styles.pointValue, { left: point.x - 34, top: point.y - 29, color: latest ? color : colors.textSecondary }, latest && styles.latestValue]}>{point.value}</AppText>
             <View style={[styles.point, { left: point.x - (latest ? 6 : 4.5), top: point.y - (latest ? 6 : 4.5), borderColor: color, backgroundColor: latest ? color : colors.surface }, latest && styles.latestPoint]} />
-            <AppText variant="metadata" color="textMuted" style={[styles.month, { left: point.x - 30 }]}>{point.month}</AppText>
+            <AppText variant="metadata" color="textMuted" style={[styles.label, { left: point.x - 42 }]}>{point.label}</AppText>
           </View>
         );
       }) : null}
@@ -96,14 +64,12 @@ export function TrendTrack({ measurements, unit, color, reference, referenceMark
 }
 
 const styles = StyleSheet.create({
-  plot: { height: PLOT_HEIGHT, position: 'relative', marginVertical: spacing.md },
+  plot: { height: PLOT_HEIGHT, position: 'relative', marginVertical: spacing.sm },
   gridLine: { position: 'absolute', left: HORIZONTAL_PADDING, right: HORIZONTAL_PADDING, height: 1, backgroundColor: colors.borderSubtle },
-  referenceLine: { position: 'absolute', left: HORIZONTAL_PADDING, right: HORIZONTAL_PADDING, height: 1, borderTopWidth: 1, borderStyle: 'dashed', borderTopColor: colors.borderStrong },
-  referenceLabel: { position: 'absolute', right: 0, top: 4, paddingLeft: spacing.sm, backgroundColor: colors.surface },
   segment: { position: 'absolute', height: 1.5, opacity: 0.62 },
-  pointValue: { position: 'absolute', width: 60, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  pointValue: { position: 'absolute', width: 68, textAlign: 'center', fontVariant: ['tabular-nums'] },
   latestValue: { fontSize: 15, fontWeight: '600' },
   point: { position: 'absolute', width: 9, height: 9, borderWidth: 1.5, borderRadius: radii.pill },
   latestPoint: { width: 12, height: 12 },
-  month: { position: 'absolute', top: 157, width: 60, textAlign: 'center', fontSize: 9 },
+  label: { position: 'absolute', top: 140, width: 84, textAlign: 'center', fontSize: 9 },
 });
