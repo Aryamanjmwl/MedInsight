@@ -8,6 +8,8 @@ import { ReportRow } from '@/components/report-card';
 import { ReportDetailPanel } from '@/components/report-detail-panel';
 import { NoMatchingReports, ReportsEmptyState, ReportsErrorState, ReportsLoadingState, ReportsRefreshError } from '@/components/reports-request-states';
 import { Screen } from '@/components/screen';
+import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
+import { useReportUploadDialog } from '@/context/report-upload-context';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { colors, radii, spacing, typography } from '@/theme';
 import { formatYear } from '@/utils/formatting';
@@ -25,6 +27,8 @@ function groupReportsByYear(reports: SavedReportSummary[]): ReportYearGroup[] {
 
 export default function ReportsScreen() {
   const { isCompact } = useResponsiveLayout();
+  const { revision } = useHealthDataRefresh();
+  const { openReportUpload } = useReportUploadDialog();
   const [reports, setReports] = useState<SavedReportSummary[] | null>(null);
   const [listError, setListError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +41,7 @@ export default function ReportsScreen() {
   const listRequestId = useRef(0);
   const detailRequestId = useRef(0);
   const selectedReportIdRef = useRef<number | null>(null);
+  const handledRevision = useRef(revision);
 
   const loadReports = useCallback(async (refresh = false) => {
     const currentRequest = ++listRequestId.current;
@@ -92,6 +97,12 @@ export default function ReportsScreen() {
     };
   }, [loadReports]);
 
+  useEffect(() => {
+    if (handledRevision.current === revision) return;
+    handledRevision.current = revision;
+    void loadReports(true);
+  }, [loadReports, revision]);
+
   const selectReport = (reportId: number) => {
     if (selectedReportIdRef.current === reportId) {
       detailRequestId.current += 1;
@@ -142,7 +153,7 @@ export default function ReportsScreen() {
           <Pressable accessibilityRole="button" disabled={refreshing} onPress={() => void loadReports(true)} style={({ pressed, hovered }) => [styles.refresh, (pressed || hovered) && styles.controlActive]}>
             {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}
           </Pressable>
-          <Pressable accessibilityRole="button" style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.controlActive]}>
+          <Pressable accessibilityRole="button" onPress={openReportUpload} style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.controlActive]}>
             <AppText variant="label" color="textSecondary">Upload report</AppText>
           </Pressable>
         </View>
@@ -150,7 +161,7 @@ export default function ReportsScreen() {
 
       {loading && reports === null ? <ReportsLoadingState /> : null}
       {listError && reports === null ? <ReportsErrorState onRetry={() => void loadReports()} /> : null}
-      {reports?.length === 0 ? <ReportsEmptyState refreshing={refreshing} refreshFailed={listError !== null} onRefresh={() => void loadReports(true)} /> : null}
+      {reports?.length === 0 ? <ReportsEmptyState refreshing={refreshing} refreshFailed={listError !== null} onUpload={openReportUpload} onRefresh={() => void loadReports(true)} /> : null}
       {reports && reports.length > 0 ? (
         <View style={styles.history}>
           {listError ? <ReportsRefreshError onRetry={() => void loadReports(true)} /> : null}

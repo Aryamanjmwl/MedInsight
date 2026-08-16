@@ -28,6 +28,13 @@ EXPO_PUBLIC_API_URL=http://127.0.0.1:8000
 
 The web client falls back to this local URL when the variable is omitted. Native clients require an explicit URL because `127.0.0.1` may refer to the emulator or device itself. `EXPO_PUBLIC_*` variables are included in the public client bundle, so never store secrets, tokens, keys, or credentials in them.
 
+## PDF report upload
+
+The client can select one PDF on web, Android, or iOS and send it to
+`POST /reports/process-and-save` as multipart form data. Reports are limited to
+10 MiB. Uploading requires a reachable MedInsight backend and does not require
+client-side secrets.
+
 ## Validation
 
 ```bash
@@ -41,6 +48,7 @@ npx expo export --platform web
 - Dashboard, reports, biomarkers, and settings routes
 - Mobile bottom-tab navigation
 - Responsive web support
-- Mock data remains active in screens; typed backend client modules are available for later integration
+- Real dashboard, reports, and biomarker data
+- PDF processing and saved-report upload
 
-Screen-level backend integration, authentication, charting dependencies, and AI features are intentionally not included yet.
+Authentication, OCR, and AI features are intentionally not included yet.

@@ -1,7 +1,8 @@
 export { ApiError } from '@/api/client';
 export { getBiomarkerHistory, getBiomarkers, getBiomarkerTrend } from '@/api/biomarkers';
 export { getDashboardSummary } from '@/api/dashboard';
-export { getReport, getReports } from '@/api/reports';
+export { getReport, getReports, processAndSaveReport } from '@/api/reports';
+export type { ReportUploadFile } from '@/api/reports';
 
 export type {
   BiomarkerHistoryItem,
@@ -13,6 +14,8 @@ export type {
   DashboardSummaryResponse,
   IsoDateTime,
   ReferenceOperator,
+  ProcessAndSaveReportResponse,
+  ReportProcessingResult,
   SavedReportDetail,
   SavedReportSummary,
   TrendDirection,

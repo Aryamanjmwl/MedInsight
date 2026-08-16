@@ -68,26 +68,7 @@ async function getResponseErrorMessage(response: Response) {
   return `API request failed with status ${response.status}.`;
 }
 
-export async function getJson<T>(
-  endpoint: string,
-  fetchImplementation: FetchImplementation = globalThis.fetch,
-): Promise<T> {
-  let response: Response;
-
-  try {
-    response = await fetchImplementation(buildUrl(endpoint), {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw new ApiError({
-      message: 'Unable to reach the MedInsight API.',
-      endpoint,
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-
+async function parseJsonResponse<T>(response: Response, endpoint: string) {
   if (!response.ok) {
     throw new ApiError({
       message: await getResponseErrorMessage(response),
@@ -106,4 +87,55 @@ export async function getJson<T>(
       cause: error instanceof Error ? error : undefined,
     });
   }
+}
+
+async function requestJson<T>(
+  endpoint: string,
+  init: RequestInit,
+  fetchImplementation: FetchImplementation,
+) {
+  let response: Response;
+
+  try {
+    response = await fetchImplementation(buildUrl(endpoint), init);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError({
+      message: 'Unable to reach the MedInsight API.',
+      endpoint,
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+
+  return parseJsonResponse<T>(response, endpoint);
+}
+
+export async function getJson<T>(
+  endpoint: string,
+  fetchImplementation: FetchImplementation = globalThis.fetch,
+): Promise<T> {
+  return requestJson<T>(
+    endpoint,
+    {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    },
+    fetchImplementation,
+  );
+}
+
+export function postFormData<T>(
+  endpoint: string,
+  formData: FormData,
+  fetchImplementation: FetchImplementation = globalThis.fetch,
+) {
+  return requestJson<T>(
+    endpoint,
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      body: formData,
+    },
+    fetchImplementation,
+  );
 }

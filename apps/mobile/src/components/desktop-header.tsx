@@ -2,6 +2,7 @@ import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
+import { useReportUploadDialog } from '@/context/report-upload-context';
 import { colors, layout, radii, spacing, typography } from '@/theme';
 
 const navigation: { label: string; href?: Href }[] = [
@@ -15,6 +16,7 @@ const navigation: { label: string; href?: Href }[] = [
 export function DesktopHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const { openReportUpload } = useReportUploadDialog();
 
   return (
     <View style={styles.shell}>
@@ -51,7 +53,7 @@ export function DesktopHeader() {
           <Pressable accessibilityLabel="Search" style={({ hovered }) => [styles.outlineAction, hovered && styles.actionHovered]}>
             <AppText variant="caption" color="textMuted">⌕  Search</AppText>
           </Pressable>
-          <Pressable accessibilityLabel="Upload report" style={({ hovered }) => [styles.outlineAction, hovered && styles.actionHovered]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Upload report" onPress={openReportUpload} style={({ hovered, pressed }) => [styles.outlineAction, (hovered || pressed) && styles.actionHovered]}>
             <AppText variant="caption" color="textSecondary">Upload report</AppText>
           </Pressable>
           <Pressable accessibilityLabel="Open profile" style={styles.avatar}>

@@ -1,6 +1,8 @@
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { HealthDataRefreshProvider } from '@/context/health-data-refresh-context';
+import { ReportUploadProvider } from '@/context/report-upload-context';
 import { colors } from '@/theme';
 
 const navigationTheme = {
@@ -18,10 +20,14 @@ const navigationTheme = {
 export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+      <HealthDataRefreshProvider>
+        <ReportUploadProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </ReportUploadProvider>
+      </HealthDataRefreshProvider>
     </ThemeProvider>
   );
 }

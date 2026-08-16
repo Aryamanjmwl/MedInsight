@@ -8,6 +8,8 @@ import { BiomarkerRow } from '@/components/biomarker-row';
 import { BiomarkersEmptyState, BiomarkersErrorState, BiomarkersLoadingState, BiomarkersRefreshError, NoBiomarkersInFilter } from '@/components/biomarkers-request-states';
 import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
+import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
+import { useReportUploadDialog } from '@/context/report-upload-context';
 import { colors, radii, spacing } from '@/theme';
 
 type Filter = 'all' | 'attention' | 'normal';
@@ -24,6 +26,8 @@ function matchesFilter(status: BiomarkerStatus, filter: Filter) {
 }
 
 export default function BiomarkersScreen() {
+  const { revision } = useHealthDataRefresh();
+  const { openReportUpload } = useReportUploadDialog();
   const [biomarkers, setBiomarkers] = useState<BiomarkerOverview[] | null>(null);
   const [overviewError, setOverviewError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +41,7 @@ export default function BiomarkersScreen() {
   const overviewRequestId = useRef(0);
   const detailRequestId = useRef(0);
   const selectedNameRef = useRef<string | null>(null);
+  const handledRevision = useRef(revision);
 
   const loadBiomarkerDetail = useCallback(async (normalizedName: string) => {
     const currentRequest = ++detailRequestId.current;
@@ -108,6 +113,12 @@ export default function BiomarkersScreen() {
     };
   }, [loadBiomarkerOverview]);
 
+  useEffect(() => {
+    if (handledRevision.current === revision) return;
+    handledRevision.current = revision;
+    void loadBiomarkerOverview(true);
+  }, [loadBiomarkerOverview, revision]);
+
   const clearSelection = () => {
     detailRequestId.current += 1;
     selectedNameRef.current = null;
@@ -170,7 +181,7 @@ export default function BiomarkersScreen() {
 
         {loading && biomarkers === null ? <BiomarkersLoadingState /> : null}
         {overviewError && biomarkers === null ? <BiomarkersErrorState onRetry={() => void loadBiomarkerOverview()} /> : null}
-        {biomarkers?.length === 0 ? <BiomarkersEmptyState refreshing={refreshing} refreshFailed={overviewError !== null} onRefresh={() => void loadBiomarkerOverview(true)} /> : null}
+        {biomarkers?.length === 0 ? <BiomarkersEmptyState refreshing={refreshing} refreshFailed={overviewError !== null} onUpload={openReportUpload} onRefresh={() => void loadBiomarkerOverview(true)} /> : null}
         {biomarkers && biomarkers.length > 0 ? (
           <View style={styles.list}>
             {overviewError ? <BiomarkersRefreshError onRetry={() => void loadBiomarkerOverview(true)} /> : null}

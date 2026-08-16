@@ -10,16 +10,21 @@ import { LatestReportPanel } from '@/components/latest-report-panel';
 import { NeedsAttention } from '@/components/needs-attention';
 import { RecordHeader } from '@/components/record-header';
 import { Screen } from '@/components/screen';
+import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
+import { useReportUploadDialog } from '@/context/report-upload-context';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { layout, spacing } from '@/theme';
 
 export default function DashboardScreen() {
   const { isDesktop } = useResponsiveLayout();
+  const { revision } = useHealthDataRefresh();
+  const { openReportUpload } = useReportUploadDialog();
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const requestId = useRef(0);
+  const handledRevision = useRef(revision);
 
   const loadDashboard = useCallback(async (refresh = false) => {
     const currentRequest = ++requestId.current;
@@ -46,6 +51,12 @@ export default function DashboardScreen() {
     return () => { requestId.current += 1; };
   }, [loadDashboard]);
 
+  useEffect(() => {
+    if (handledRevision.current === revision) return;
+    handledRevision.current = revision;
+    void loadDashboard(true);
+  }, [loadDashboard, revision]);
+
   if (loading && !summary) {
     return <Screen><DashboardLoadingState /></Screen>;
   }
@@ -58,6 +69,7 @@ export default function DashboardScreen() {
     return (
       <Screen>
         <DashboardEmptyState
+          onUpload={openReportUpload}
           onRefresh={() => void loadDashboard(true)}
           refreshing={refreshing}
           refreshFailed={error !== null}

@@ -17,12 +17,12 @@ export function BiomarkersErrorState({ onRetry }: { onRetry: () => void }) {
   return <MessagePanel title="Unable to load biomarkers" copy="MedInsight could not retrieve your biomarker history."><Action label="Try again" onPress={onRetry} /></MessagePanel>;
 }
 
-export function BiomarkersEmptyState({ refreshing, refreshFailed, onRefresh }: { refreshing: boolean; refreshFailed: boolean; onRefresh: () => void }) {
+export function BiomarkersEmptyState({ refreshing, refreshFailed, onUpload, onRefresh }: { refreshing: boolean; refreshFailed: boolean; onUpload: () => void; onRefresh: () => void }) {
   return (
     <MessagePanel title="No biomarkers tracked yet" copy="Process a laboratory report to begin building your biomarker history.">
       {refreshFailed ? <AppText variant="caption" color="textSecondary">The biomarker list could not be refreshed.</AppText> : null}
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.active]}><AppText variant="label" color="textSecondary">Upload report</AppText></Pressable>
+        <Pressable accessibilityRole="button" onPress={onUpload} style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.active]}><AppText variant="label" color="textSecondary">Upload report</AppText></Pressable>
         <Pressable accessibilityRole="button" disabled={refreshing} onPress={onRefresh} style={styles.refreshAction}>{refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}</Pressable>
       </View>
     </MessagePanel>

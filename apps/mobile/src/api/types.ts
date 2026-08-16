@@ -32,6 +32,21 @@ export interface SavedReportDetail extends SavedReportSummary {
   biomarkers: BiomarkerResult[];
 }
 
+export interface ReportProcessingResult {
+  filename: string;
+  page_count: number;
+  character_count: number;
+  requires_ocr: boolean;
+  biomarker_count: number;
+  unparsed_line_count: number;
+  biomarkers: BiomarkerResult[];
+}
+
+export interface ProcessAndSaveReportResponse {
+  report_id: number;
+  result: ReportProcessingResult;
+}
+
 export interface BiomarkerOverview {
   normalized_name: string;
   test_name: string;

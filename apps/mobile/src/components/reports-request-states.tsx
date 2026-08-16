@@ -24,12 +24,12 @@ export function ReportsErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-export function ReportsEmptyState({ refreshing, refreshFailed, onRefresh }: { refreshing: boolean; refreshFailed: boolean; onRefresh: () => void }) {
+export function ReportsEmptyState({ refreshing, refreshFailed, onUpload, onRefresh }: { refreshing: boolean; refreshFailed: boolean; onUpload: () => void; onRefresh: () => void }) {
   return (
     <MessagePanel title="No laboratory reports yet" copy="Upload your first report to begin building your longitudinal health record.">
       {refreshFailed ? <AppText variant="caption" color="textSecondary">The report list could not be refreshed.</AppText> : null}
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.active]}>
+        <Pressable accessibilityRole="button" onPress={onUpload} style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.active]}>
           <AppText variant="label" color="textSecondary">Upload report</AppText>
         </Pressable>
         <Pressable accessibilityRole="button" disabled={refreshing} onPress={onRefresh} style={styles.refreshAction}>

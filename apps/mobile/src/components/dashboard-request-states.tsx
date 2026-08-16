@@ -44,12 +44,13 @@ export function DashboardErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 type DashboardEmptyStateProps = {
+  onUpload: () => void;
   onRefresh: () => void;
   refreshing: boolean;
   refreshFailed: boolean;
 };
 
-export function DashboardEmptyState({ onRefresh, refreshing, refreshFailed }: DashboardEmptyStateProps) {
+export function DashboardEmptyState({ onUpload, onRefresh, refreshing, refreshFailed }: DashboardEmptyStateProps) {
   return (
     <View style={styles.stateStack}>
       <StateHeader metadata="HEALTH RECORD" detail="No reports recorded" />
@@ -58,7 +59,7 @@ export function DashboardEmptyState({ onRefresh, refreshing, refreshFailed }: Da
         <AppText color="textSecondary" style={styles.messageCopy}>Upload your first laboratory report to begin tracking biomarkers over time.</AppText>
         {refreshFailed ? <AppText variant="caption" color="textSecondary">The latest dashboard data could not be refreshed.</AppText> : null}
         <View style={styles.emptyActions}>
-          <Pressable accessibilityRole="button" style={({ hovered, pressed }) => [styles.outlineAction, (hovered || pressed) && styles.actionActive]}>
+          <Pressable accessibilityRole="button" onPress={onUpload} style={({ hovered, pressed }) => [styles.outlineAction, (hovered || pressed) && styles.actionActive]}>
             <AppText variant="label" color="textSecondary">Upload report</AppText>
           </Pressable>
           <Pressable accessibilityRole="button" disabled={refreshing} onPress={onRefresh} style={({ hovered, pressed }) => [styles.action, (hovered || pressed) && styles.actionActive]}>
