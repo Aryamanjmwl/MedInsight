@@ -112,3 +112,19 @@ grounding enhancement. The implementation uses the
 [Responses API structured-output interface](https://developers.openai.com/api/docs/guides/structured-outputs)
 and does not provide chat, report-wide reasoning, web browsing, agents, or a
 vector database.
+
+## Doctor Visit Brief
+
+`GET /dashboard/doctor-brief` generates a concise appointment-preparation brief
+on demand from the current persisted structured lab record. It includes up to
+five recent reports, each biomarker's latest measurement, latest results outside
+their report-provided range, comparable deterministic changes over time,
+measurements without usable reference information, and up to five factual
+questions to discuss with a healthcare professional.
+
+The brief does not use AI, diagnose conditions, assign severity, invent
+reference ranges, or recommend treatments or medication changes. It excludes
+filenames, source text, PDF/OCR content, and AI explanation history. Briefs and
+generated questions are not persisted. The current database remains a
+single-user/local-development architecture until authentication and per-user
+access control are added.

@@ -51,6 +51,7 @@ npx expo export --platform web
 - Real dashboard, reports, and biomarker data
 - PDF processing and saved-report upload
 - Ephemeral, contextual AI explanations for individual saved biomarkers
+- Refresh-aware Doctor Visit Brief for factual appointment preparation
 
 Scanned-report OCR is performed locally by the configured backend when needed;
 the client does not call a cloud OCR service. AI provider credentials remain on

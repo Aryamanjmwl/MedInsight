@@ -9,8 +9,7 @@ const navigation: { label: string; href?: Href }[] = [
   { label: 'Overview', href: '/' },
   { label: 'Reports', href: '/reports' },
   { label: 'Biomarkers', href: '/biomarkers' },
-  { label: 'History' },
-  { label: 'Insights' },
+  { label: 'Doctor Brief', href: '/brief' as Href },
 ];
 
 export function DesktopHeader() {

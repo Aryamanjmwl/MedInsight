@@ -11,6 +11,7 @@ from ...db import (
     get_report_statistics,
     list_biomarker_overviews,
 )
+from ...doctor_brief import DoctorVisitBriefResponse, build_doctor_visit_brief
 from ...trends import TrendDirection, TrendResult, calculate_trend
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -73,3 +74,10 @@ def dashboard_summary(
         latest_biomarkers=latest_biomarkers,
         trends=trends,
     )
+
+
+@router.get("/doctor-brief", response_model=DoctorVisitBriefResponse)
+def doctor_visit_brief(
+    session: Session = Depends(get_db_session),
+) -> DoctorVisitBriefResponse:
+    return build_doctor_visit_brief(session)

@@ -111,3 +111,55 @@ export interface DashboardSummaryResponse {
   latest_biomarkers: DashboardBiomarkerSummary[];
   trends: TrendResult[];
 }
+
+export interface BriefRecentReport {
+  report_id: number;
+  uploaded_at: IsoDateTime;
+  page_count: number;
+  biomarker_count: number;
+  requires_ocr: boolean;
+}
+
+export interface BriefMeasurement {
+  report_id: number;
+  normalized_name: string;
+  display_name: string;
+  value: number;
+  unit: string;
+  status: BiomarkerStatus;
+  reference_low: number | null;
+  reference_high: number | null;
+  reference_operator: ReferenceOperator | null;
+  raw_reference: string;
+  measurement_date: IsoDateTime;
+}
+
+export interface BriefUnclassifiedMeasurement extends BriefMeasurement {
+  reason: string;
+}
+
+export interface BriefTrend {
+  normalized_name: string;
+  display_name: string;
+  unit: string;
+  first_value: number;
+  latest_value: number;
+  absolute_change: number;
+  percent_change: number | null;
+  direction: TrendDirection;
+  first_date: IsoDateTime;
+  latest_date: IsoDateTime;
+}
+
+export interface DoctorVisitBriefResponse {
+  generated_at: IsoDateTime;
+  report_count: number;
+  latest_report_date: IsoDateTime | null;
+  recent_reports: BriefRecentReport[];
+  latest_measurements: BriefMeasurement[];
+  needs_attention: BriefMeasurement[];
+  trend_summary: BriefTrend[];
+  unclassified_measurements: BriefUnclassifiedMeasurement[];
+  questions_to_discuss: string[];
+  limitations: string[];
+}
