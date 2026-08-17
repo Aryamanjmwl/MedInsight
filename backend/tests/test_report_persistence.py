@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -11,9 +12,10 @@ from backend.app.api.routes.reports import (
     get_reports,
     process_and_save_report,
 )
-from backend.app.db import Base, BiomarkerResult, create_database_engine
+from backend.app.db import Base, BiomarkerResult, Report, create_database_engine
 from backend.tests.test_report_extraction import make_pdf
 from backend.tests.test_reports import make_upload
+from backend.tests.test_ocr import make_ocr_result
 
 
 class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
@@ -81,15 +83,53 @@ class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(context.exception.status_code, 404)
 
     async def test_report_with_zero_biomarkers_can_be_saved(self) -> None:
-        response = await process_and_save_report(
-            make_upload("scan.pdf", "application/pdf", make_pdf("")),
-            self.session,
-        )
+        with patch(
+            "backend.app.document_processing.report_extractor.extract_pdf_ocr",
+            return_value=make_ocr_result(""),
+        ):
+            response = await process_and_save_report(
+                make_upload("scan.pdf", "application/pdf", make_pdf("")),
+                self.session,
+            )
 
         detail = get_report(response.report_id, self.session)
         self.assertTrue(detail.requires_ocr)
         self.assertEqual(detail.biomarker_count, 0)
         self.assertEqual(detail.biomarkers, [])
+
+    async def test_ocr_derived_biomarkers_are_saved_without_raw_content(self) -> None:
+        page_texts = (
+            "Hemoglobin 10.8 g/dL 12.0 - 15.5",
+            "Glucose 92 mg/dL 70 - 99",
+        )
+        with patch(
+            "backend.app.document_processing.report_extractor.extract_pdf_ocr",
+            return_value=make_ocr_result(*page_texts),
+        ):
+            response = await process_and_save_report(
+                make_upload("scan.pdf", "application/pdf", make_pdf("", "")),
+                self.session,
+            )
+
+        detail = get_report(response.report_id, self.session)
+        saved_report = self.session.get(Report, response.report_id)
+        self.assertTrue(response.result.requires_ocr)
+        self.assertTrue(response.result.ocr_used)
+        self.assertEqual(detail.biomarker_count, 2)
+        self.assertEqual(
+            {column.name for column in Report.__table__.columns},
+            {
+                "id",
+                "filename",
+                "uploaded_at",
+                "page_count",
+                "character_count",
+                "requires_ocr",
+            },
+        )
+        self.assertFalse(hasattr(saved_report, "text"))
+        self.assertFalse(hasattr(saved_report, "pdf_bytes"))
+        self.assertFalse(hasattr(saved_report, "page_images"))
 
 
 if __name__ == "__main__":

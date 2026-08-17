@@ -12,9 +12,11 @@ from ...biomarkers import (
     parse_biomarkers,
 )
 from ...document_processing import (
+    OCRExtractionError,
+    OCRUnavailableError,
     PDFExtractionError,
-    PDFExtractionResult,
-    extract_pdf_text,
+    ReportTextExtractionResult,
+    extract_report_text,
 )
 from ...db import (
     BiomarkerResult,
@@ -49,6 +51,7 @@ class ReportExtractionResponse(BaseModel):
     character_count: int
     text_extracted: bool
     requires_ocr: bool
+    ocr_used: bool
     text: str
 
 
@@ -57,6 +60,7 @@ class ReportProcessingResponse(BaseModel):
     page_count: int
     character_count: int
     requires_ocr: bool
+    ocr_used: bool
     biomarker_count: int
     unparsed_line_count: int
     biomarkers: list[Biomarker]
@@ -105,9 +109,19 @@ async def _read_pdf_upload(file: UploadFile) -> tuple[str, bytes]:
     return filename, bytes(pdf_bytes)
 
 
-def _extract_pdf_or_422(pdf_bytes: bytes) -> PDFExtractionResult:
+def _extract_pdf_or_http_error(pdf_bytes: bytes) -> ReportTextExtractionResult:
     try:
-        return extract_pdf_text(pdf_bytes)
+        return extract_report_text(pdf_bytes)
+    except OCRUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except OCRExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
     except PDFExtractionError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -154,14 +168,15 @@ async def upload_report(file: UploadFile) -> ReportUploadResponse:
 @router.post("/extract", response_model=ReportExtractionResponse)
 async def extract_report(file: UploadFile) -> ReportExtractionResponse:
     filename, pdf_bytes = await _read_pdf_upload(file)
-    extraction = _extract_pdf_or_422(pdf_bytes)
+    extraction = _extract_pdf_or_http_error(pdf_bytes)
 
     return ReportExtractionResponse(
         filename=filename,
         page_count=extraction.page_count,
         character_count=extraction.character_count,
         text_extracted=extraction.has_meaningful_text,
-        requires_ocr=not extraction.has_meaningful_text,
+        requires_ocr=extraction.requires_ocr,
+        ocr_used=extraction.ocr_used,
         text=extraction.text,
     )
 
@@ -174,14 +189,15 @@ def extract_biomarkers(payload: BiomarkerTextRequest) -> BiomarkerParseResult:
 @router.post("/process", response_model=ReportProcessingResponse)
 async def process_report(file: UploadFile) -> ReportProcessingResponse:
     filename, pdf_bytes = await _read_pdf_upload(file)
-    extraction = _extract_pdf_or_422(pdf_bytes)
+    extraction = _extract_pdf_or_http_error(pdf_bytes)
 
     if not extraction.has_meaningful_text:
         return ReportProcessingResponse(
             filename=filename,
             page_count=extraction.page_count,
             character_count=extraction.character_count,
-            requires_ocr=True,
+            requires_ocr=extraction.requires_ocr,
+            ocr_used=extraction.ocr_used,
             biomarker_count=0,
             unparsed_line_count=0,
             biomarkers=[],
@@ -192,7 +208,8 @@ async def process_report(file: UploadFile) -> ReportProcessingResponse:
         filename=filename,
         page_count=extraction.page_count,
         character_count=extraction.character_count,
-        requires_ocr=False,
+        requires_ocr=extraction.requires_ocr,
+        ocr_used=extraction.ocr_used,
         biomarker_count=parsed.count,
         unparsed_line_count=parsed.unparsed_line_count,
         biomarkers=parsed.biomarkers,

@@ -20,6 +20,12 @@ class PDFExtractionResult:
     has_meaningful_text: bool
 
 
+def has_meaningful_text(text: str) -> bool:
+    """Return whether text contains enough non-whitespace content to process."""
+    meaningful_character_count = sum(not character.isspace() for character in text)
+    return meaningful_character_count >= MIN_MEANINGFUL_CHARACTER_COUNT
+
+
 def extract_pdf_text(pdf_bytes: bytes) -> PDFExtractionResult:
     """Extract machine-readable text from an in-memory PDF, page by page."""
     if not pdf_bytes:
@@ -36,16 +42,10 @@ def extract_pdf_text(pdf_bytes: bytes) -> PDFExtractionResult:
         ) from exc
 
     combined_text = "\n\n".join(page_texts)
-    meaningful_character_count = sum(
-        not character.isspace() for character in combined_text
-    )
-
     return PDFExtractionResult(
         page_texts=page_texts,
         page_count=len(page_texts),
         text=combined_text,
         character_count=len(combined_text),
-        has_meaningful_text=(
-            meaningful_character_count >= MIN_MEANINGFUL_CHARACTER_COUNT
-        ),
+        has_meaningful_text=has_meaningful_text(combined_text),
     )

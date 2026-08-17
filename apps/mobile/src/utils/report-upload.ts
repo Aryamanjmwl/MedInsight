@@ -25,6 +25,7 @@ export function uploadErrorMessage(error: unknown) {
     if (error.status === 413) return 'File is larger than the allowed upload limit.';
     if (error.status === 415) return 'Unsupported file type. Please choose a PDF.';
     if (error.status === 422) return 'The PDF could not be processed.';
+    if (error.status === 503) return 'OCR is required for this report but is not available on the server.';
   }
   return 'Unable to process this report right now.';
 }

@@ -1,11 +1,13 @@
 import io
 import unittest
+from unittest.mock import patch
 
 from fastapi import HTTPException
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from backend.app.api.routes.reports import extract_report, upload_report
+from backend.app.document_processing import OCRExtractionResult
 from backend.app.main import health_check
 from backend.tests.test_reports import make_upload
 
@@ -47,6 +49,16 @@ def make_pdf(*page_texts: str) -> bytes:
     return output.getvalue()
 
 
+def make_empty_ocr_result() -> OCRExtractionResult:
+    return OCRExtractionResult(
+        page_texts=("",),
+        page_count=1,
+        text="",
+        character_count=0,
+        has_meaningful_text=False,
+    )
+
+
 class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
     async def test_valid_text_based_pdf_extraction(self) -> None:
         text = "Synthetic laboratory report with machine-readable text."
@@ -61,6 +73,7 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.character_count, len(response.text))
         self.assertTrue(response.text_extracted)
         self.assertFalse(response.requires_ocr)
+        self.assertFalse(response.ocr_used)
 
     async def test_multi_page_pdf_extraction(self) -> None:
         first_page = "First page synthetic laboratory information."
@@ -96,15 +109,42 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("PDF files are required", context.exception.detail)
 
     async def test_pdf_without_extractable_text_requires_ocr(self) -> None:
-        response = await extract_report(
-            make_upload("scan.pdf", "application/pdf", make_pdf(""))
-        )
+        with patch(
+            "backend.app.document_processing.report_extractor.extract_pdf_ocr",
+            return_value=make_empty_ocr_result(),
+        ):
+            response = await extract_report(
+                make_upload("scan.pdf", "application/pdf", make_pdf(""))
+            )
 
         self.assertEqual(response.page_count, 1)
         self.assertEqual(response.character_count, 0)
         self.assertFalse(response.text_extracted)
         self.assertTrue(response.requires_ocr)
+        self.assertTrue(response.ocr_used)
         self.assertEqual(response.text, "")
+
+    async def test_extract_returns_ocr_text_and_usage_metadata(self) -> None:
+        text = "Hemoglobin 13.5 g/dL 12.0 - 15.5"
+        ocr_result = OCRExtractionResult(
+            page_texts=(text,),
+            page_count=1,
+            text=text,
+            character_count=len(text),
+            has_meaningful_text=True,
+        )
+        with patch(
+            "backend.app.document_processing.report_extractor.extract_pdf_ocr",
+            return_value=ocr_result,
+        ):
+            response = await extract_report(
+                make_upload("scan.pdf", "application/pdf", make_pdf(""))
+            )
+
+        self.assertTrue(response.text_extracted)
+        self.assertTrue(response.requires_ocr)
+        self.assertTrue(response.ocr_used)
+        self.assertEqual(response.text, text)
 
     async def test_existing_upload_endpoint_still_works(self) -> None:
         content = make_pdf("Synthetic report content for upload validation.")

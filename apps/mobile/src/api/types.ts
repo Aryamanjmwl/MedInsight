@@ -37,6 +37,7 @@ export interface ReportProcessingResult {
   page_count: number;
   character_count: number;
   requires_ocr: boolean;
+  ocr_used: boolean;
   biomarker_count: number;
   unparsed_line_count: number;
   biomarkers: BiomarkerResult[];

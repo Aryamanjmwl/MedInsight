@@ -1,5 +1,8 @@
 fastapi==0.141.1
+Pillow==12.3.0
 pypdf==6.14.2
+pypdfium2==5.12.1
+pytesseract==0.3.13
 python-multipart==0.0.32
 SQLAlchemy==2.0.51
 uvicorn==0.52.3

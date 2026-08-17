@@ -72,15 +72,20 @@ export function ReportUploadDialog({ visible, phase, selectedFile, result, error
               <View style={styles.successMark} />
               <AppText variant="section">Report processed</AppText>
               <AppText variant="bodyStrong" selectable>{result.result.filename}</AppText>
-              {result.result.requires_ocr ? (
+              {result.result.requires_ocr && result.result.biomarker_count === 0 && result.result.unparsed_line_count === 0 ? (
                 <View style={styles.ocrNotice}>
                   <AppText variant="label" color="statusLow">OCR required</AppText>
-                  <AppText variant="caption" color="textSecondary">This report appears to need OCR before biomarkers can be extracted. It was saved, but text extraction was limited.</AppText>
+                  <AppText variant="caption" color="textSecondary">OCR could not recover enough readable text from this report. It was saved without extracted biomarkers.</AppText>
                 </View>
-              ) : result.result.biomarker_count > 0 ? (
-                <AppText color="textSecondary">{result.result.biomarker_count} {result.result.biomarker_count === 1 ? 'biomarker' : 'biomarkers'} extracted and saved to your health record.</AppText>
               ) : (
-                <AppText color="textSecondary">The report was saved, but no supported biomarkers were extracted.</AppText>
+                <>
+                  {result.result.ocr_used ? <AppText variant="caption" color="textSecondary">Text was recovered using OCR.</AppText> : null}
+                  {result.result.biomarker_count > 0 ? (
+                    <AppText color="textSecondary">{result.result.biomarker_count} {result.result.biomarker_count === 1 ? 'biomarker' : 'biomarkers'} extracted and saved to your health record.</AppText>
+                  ) : (
+                    <AppText color="textSecondary">The report was saved, but no supported biomarkers were extracted.</AppText>
+                  )}
+                </>
               )}
               <AppText variant="caption" color="textMuted">Saved report #{result.report_id} · {result.result.page_count} {result.result.page_count === 1 ? 'page' : 'pages'}</AppText>
               <View style={styles.actions}><PrimaryAction label="Done" onPress={onClose} /></View>
