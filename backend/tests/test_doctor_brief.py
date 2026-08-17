@@ -14,6 +14,7 @@ from backend.app.doctor_brief.service import (
     QUESTION_LIMIT,
     RECENT_REPORT_LIMIT,
 )
+from backend.tests.auth_helpers import USER_A, USER_A_ID
 
 
 class DoctorVisitBriefTests(unittest.TestCase):
@@ -60,6 +61,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
                 )
             )
         report = Report(
+            user_id=USER_A_ID,
             filename="private-report-name.pdf",
             uploaded_at=uploaded_at,
             page_count=page_count,
@@ -93,7 +95,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
         }
 
     def test_empty_database_returns_a_complete_empty_brief(self) -> None:
-        brief = doctor_visit_brief(self.session)
+        brief = doctor_visit_brief(self.session, USER_A)
 
         self.assertEqual(brief.report_count, 0)
         self.assertIsNone(brief.latest_report_date)
@@ -111,7 +113,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             page_count=2,
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(brief.report_count, 1)
         self.assertEqual(brief.recent_reports[0].report_id, report_id)
@@ -128,7 +130,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             self.measurement("hemoglobin", 10.8, unit="g/dL", status="low"),
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(
             [item.normalized_name for item in brief.needs_attention],
@@ -151,7 +153,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             ),
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(brief.needs_attention, [])
         self.assertEqual(len(brief.unclassified_measurements), 1)
@@ -170,7 +172,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             self.measurement("ldl_cholesterol", 100),
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
         trends = {item.normalized_name: item for item in brief.trend_summary}
 
         self.assertEqual(trends["glucose"].direction, "increasing")
@@ -190,7 +192,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             self.measurement("creatinine", 74, unit="µmol/L"),
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(brief.trend_summary, [])
         self.assertFalse(any("changed from" in item for item in brief.questions_to_discuss))
@@ -205,7 +207,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             self.measurement("glucose", 92, status="normal"),
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(len(brief.latest_measurements), 1)
         self.assertEqual(brief.latest_measurements[0].value, 92)
@@ -226,7 +228,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             *(self.measurement(name, 120, status="high") for name in names),
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(len(brief.questions_to_discuss), QUESTION_LIMIT)
         self.assertEqual(
@@ -242,7 +244,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
                 self.measurement("glucose", 90 + year - 2020),
             )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(len(brief.recent_reports), RECENT_REPORT_LIMIT)
         self.assertEqual(
@@ -257,7 +259,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
         item["source_text"] = secret
         self.add_report(datetime(2026, 1, 1, tzinfo=timezone.utc), item)
 
-        serialized = build_doctor_visit_brief(self.session).model_dump_json()
+        serialized = build_doctor_visit_brief(self.session, USER_A_ID).model_dump_json()
 
         self.assertNotIn(secret, serialized)
         self.assertNotIn("private-report-name.pdf", serialized)
@@ -272,7 +274,7 @@ class DoctorVisitBriefTests(unittest.TestCase):
             self.measurement("creatinine", 0.84),
         )
 
-        brief = build_doctor_visit_brief(self.session)
+        brief = build_doctor_visit_brief(self.session, USER_A_ID)
 
         self.assertEqual(
             [item.display_name for item in brief.latest_measurements],

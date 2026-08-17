@@ -23,6 +23,61 @@ $env:MEDINSIGHT_CORS_ORIGINS="http://localhost:8081,http://127.0.0.1:8081"
 Production deployments should explicitly provide their actual frontend origins.
 Wildcard origins are intentionally not enabled.
 
+## Authentication and data ownership
+
+MedInsight uses Supabase Auth email/password sessions. The Expo client needs only
+the public project URL and public anon/publishable key shown in
+`apps/mobile/.env.example`; a Supabase service-role key must never be placed in
+the client. Native sessions are persisted with Expo SecureStore and web sessions
+use browser storage. Backend API requests attach the current access token as a
+Bearer token.
+
+The backend verifies access tokens cryptographically against the Supabase JWKS
+endpoint derived from `SUPABASE_URL`. It requires a valid signature, expiration,
+issuer, audience (`authenticated` by default), issued-at time, and UUID subject.
+It does not decode unverified claims or call Supabase once per request; signing
+keys are cached and refreshed by the JWT library when needed. Missing tokens and
+invalid or expired tokens return HTTP 401. `/` and `/health` remain public;
+report processing and all persisted health-data endpoints require authentication.
+
+Every newly saved report receives the authenticated user's UUID. All report,
+biomarker, history, trend, dashboard, doctor-brief, and AI-explanation queries
+filter by that owner at the database query boundary. Biomarker rows inherit
+ownership through their report. Looking up another user's report returns the
+same 404 as a missing report. AI context is built only after the scoped lookup.
+
+## Database migrations and Supabase RLS
+
+Alembic is the production schema authority. For a clean database, run from the
+repository root:
+
+```powershell
+backend\.venv\Scripts\python.exe -m alembic -c backend/alembic.ini upgrade head
+```
+
+The local SQLite convenience startup may create missing tables for development;
+non-SQLite startup never calls `create_all`. For a pre-authentication database
+whose current tables already exist, first make a backup, then mark that schema
+as the baseline and apply ownership:
+
+```powershell
+backend\.venv\Scripts\python.exe -m alembic -c backend/alembic.ini stamp 0001_initial_schema
+backend\.venv\Scripts\python.exe -m alembic -c backend/alembic.ini upgrade head
+```
+
+Legacy rows intentionally retain `user_id = NULL` and are invisible to every
+application user. They are not assigned automatically; any later ownership
+recovery must be an explicit, audited administrative migration backed by real
+identity evidence. Application-created rows always have an owner even though
+the transition column remains nullable to preserve quarantined legacy rows.
+
+On PostgreSQL, the ownership migration enables RLS and creates `authenticated`
+policies for reports and report-linked biomarker rows using `auth.uid()`. These
+policies protect direct Supabase access. FastAPI still applies ownership filters
+because privileged server database roles can bypass RLS; RLS is defense in depth.
+Indexes cover `(reports.user_id, reports.uploaded_at)` and
+`(biomarker_results.normalized_name, biomarker_results.report_id)`.
+
 ## PDF text extraction and OCR
 
 Machine-readable PDFs are extracted directly with `pypdf`. When that produces
@@ -100,8 +155,7 @@ Explanation requests use `store=False`, and MedInsight does not persist prompts,
 responses, or token usage in its database or client storage. This setting does
 not imply zero retention: OpenAI still processes request data under its
 [API data controls and retention policies](https://developers.openai.com/api/docs/guides/your-data).
-The current database is not user-scoped because authentication has not yet been
-implemented; per-user access control is required before multi-user deployment.
+AI explanation history is user-scoped before any provider call is made.
 
 AI explanations are educational, not diagnostic, and do not provide treatment
 or medication advice. Generative responses can contain errors and should be
@@ -125,6 +179,5 @@ questions to discuss with a healthcare professional.
 The brief does not use AI, diagnose conditions, assign severity, invent
 reference ranges, or recommend treatments or medication changes. It excludes
 filenames, source text, PDF/OCR content, and AI explanation history. Briefs and
-generated questions are not persisted. The current database remains a
-single-user/local-development architecture until authentication and per-user
-access control are added.
+generated questions are not persisted. The brief is assembled exclusively from
+the authenticated user's saved reports.

@@ -13,6 +13,7 @@ from backend.app.db import Base, Report, create_database_engine
 from backend.app.trends import calculate_trend
 from backend.tests.test_report_extraction import make_pdf
 from backend.tests.test_reports import make_upload
+from backend.tests.auth_helpers import USER_A
 
 
 @dataclass(frozen=True)
@@ -112,6 +113,7 @@ class TrendApiTests(unittest.IsolatedAsyncioTestCase):
         response = await process_and_save_report(
             make_upload(filename, "application/pdf", make_pdf(*lines)),
             self.session,
+            USER_A,
         )
         report = self.session.get(Report, response.report_id)
         report.uploaded_at = uploaded_at
@@ -119,7 +121,7 @@ class TrendApiTests(unittest.IsolatedAsyncioTestCase):
         return response.report_id
 
     def test_missing_history_returns_insufficient_data(self) -> None:
-        result = biomarker_trend("creatinine", self.session)
+        result = biomarker_trend("creatinine", self.session, USER_A)
 
         self.assertEqual(result.measurement_count, 0)
         self.assertEqual(result.direction, "insufficient_data")
@@ -139,8 +141,8 @@ class TrendApiTests(unittest.IsolatedAsyncioTestCase):
             "Glucose 92 mg/dL 70 - 99",
         )
 
-        result = dashboard_summary(self.session)
-        ldl_trend = biomarker_trend("ldl_cholesterol", self.session)
+        result = dashboard_summary(self.session, USER_A)
+        ldl_trend = biomarker_trend("ldl_cholesterol", self.session, USER_A)
 
         self.assertEqual(result.total_reports, 2)
         self.assertEqual(result.total_distinct_biomarkers, 3)

@@ -10,6 +10,7 @@ from backend.app.api.routes.reports import process_and_save_report
 from backend.app.db import Base, Report, create_database_engine
 from backend.tests.test_report_extraction import make_pdf
 from backend.tests.test_reports import make_upload
+from backend.tests.auth_helpers import USER_A
 
 
 class BiomarkerHistoryTests(unittest.IsolatedAsyncioTestCase):
@@ -37,6 +38,7 @@ class BiomarkerHistoryTests(unittest.IsolatedAsyncioTestCase):
         response = await process_and_save_report(
             make_upload(filename, "application/pdf", make_pdf(*lines)),
             self.session,
+            USER_A,
         )
         report = self.session.get(Report, response.report_id)
         report.uploaded_at = uploaded_at
@@ -60,7 +62,7 @@ class BiomarkerHistoryTests(unittest.IsolatedAsyncioTestCase):
             "LDL Cholesterol 101 mg/dL <100",
         )
 
-        response = biomarker_history("ldl_cholesterol", self.session)
+        response = biomarker_history("ldl_cholesterol", self.session, USER_A)
 
         self.assertEqual(response.count, 3)
         self.assertEqual(
@@ -81,7 +83,7 @@ class BiomarkerHistoryTests(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_empty_history_is_not_an_error(self) -> None:
-        response = biomarker_history("creatinine", self.session)
+        response = biomarker_history("creatinine", self.session, USER_A)
 
         self.assertEqual(response.normalized_name, "creatinine")
         self.assertEqual(response.count, 0)
@@ -108,7 +110,7 @@ class BiomarkerHistoryTests(unittest.IsolatedAsyncioTestCase):
             "LDL Cholesterol 95 mg/dL <100",
         )
 
-        response = list_biomarkers(self.session)
+        response = list_biomarkers(self.session, USER_A)
         by_name = {item.normalized_name: item for item in response}
 
         self.assertEqual(set(by_name), {"hdl_cholesterol", "ldl_cholesterol"})

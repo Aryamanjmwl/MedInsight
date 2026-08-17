@@ -25,6 +25,8 @@ from backend.app.api.routes.biomarkers import explain_biomarker, router
 from backend.app.biomarkers.vocabulary import BIOMARKERS_BY_NORMALIZED_NAME
 from backend.app.db import Base, BiomarkerHistoryRecord, BiomarkerResult, Report
 from backend.app.db import create_database_engine, get_biomarker_history, get_db_session
+from backend.app.auth import get_current_user
+from backend.tests.auth_helpers import USER_A, USER_A_ID
 from backend.app.trends import calculate_trend
 
 
@@ -223,6 +225,7 @@ class ExplanationEndpointTests(unittest.TestCase):
     def save_glucose(self, *, source_text: str = "Glucose 92 mg/dL 70 - 99") -> None:
         self.session.add(
             Report(
+                user_id=USER_A_ID,
                 filename="private-filename.pdf",
                 page_count=1,
                 character_count=100,
@@ -250,7 +253,7 @@ class ExplanationEndpointTests(unittest.TestCase):
         self.save_glucose(source_text=injection)
         provider = CapturingProvider()
 
-        response = explain_biomarker("glucose", self.session, provider)
+        response = explain_biomarker("glucose", self.session, provider, USER_A)
 
         self.assertEqual(response.summary, explanation_payload()["summary"])
         payload = provider.context.model_dump_json()
@@ -266,6 +269,7 @@ class ExplanationEndpointTests(unittest.TestCase):
         api.include_router(router)
         api.dependency_overrides[get_db_session] = lambda: self.session
         api.dependency_overrides[get_explanation_provider] = lambda: provider
+        api.dependency_overrides[get_current_user] = lambda: USER_A
 
         response = TestClient(api).post("/biomarkers/glucose/explain")
 
@@ -276,7 +280,7 @@ class ExplanationEndpointTests(unittest.TestCase):
         self.save_glucose()
 
         with self.assertRaises(HTTPException) as raised:
-            explain_biomarker("glucose", self.session, FailingProvider())
+                explain_biomarker("glucose", self.session, FailingProvider(), USER_A)
 
         self.assertEqual(raised.exception.status_code, 503)
         self.assertNotIn("OpenAI", raised.exception.detail)
@@ -286,12 +290,12 @@ class ExplanationEndpointTests(unittest.TestCase):
         for normalized_name in ("unsupported_test", "glucose"):
             with self.subTest(normalized_name=normalized_name):
                 with self.assertRaises(HTTPException) as raised:
-                    explain_biomarker(normalized_name, self.session, provider)
+                    explain_biomarker(normalized_name, self.session, provider, USER_A)
                 self.assertEqual(raised.exception.status_code, 404)
 
     def test_history_query_does_not_expose_database_source_fields(self) -> None:
         self.save_glucose(source_text="private raw report text")
-        history = get_biomarker_history(self.session, "glucose")
+        history = get_biomarker_history(self.session, USER_A_ID, "glucose")
         self.assertFalse(hasattr(history[0], "source_text"))
         self.assertFalse(hasattr(history[0], "filename"))
 

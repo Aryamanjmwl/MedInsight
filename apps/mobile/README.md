@@ -20,20 +20,35 @@ Use `npm run android`, `npm run ios` (macOS required), or `npm run web` for a ta
 
 ## API configuration
 
-Copy `.env.example` to a local environment file and set `EXPO_PUBLIC_API_URL` to the backend base URL. For local web development, the example value is:
+Copy `.env.example` to a local environment file and configure the backend plus
+the public Supabase project values:
 
 ```text
 EXPO_PUBLIC_API_URL=http://127.0.0.1:8000
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
 The web client falls back to this local URL when the variable is omitted. Native clients require an explicit URL because `127.0.0.1` may refer to the emulator or device itself. `EXPO_PUBLIC_*` variables are included in the public client bundle, so never store secrets, tokens, keys, or credentials in them.
+
+The anon/publishable key is intended for public client configuration; it is not
+the Supabase service-role secret. Never add a service-role key, database
+password, private JWT signing material, or OpenAI key to the Expo environment.
+
+Supabase owns email/password identity and session issuance. MedInsight persists
+the session in Expo SecureStore on Android/iOS and supported browser storage on
+web. The centralized API client adds the current access token to protected
+backend requests. Signing out unmounts the user-keyed application providers so
+report, dashboard, biomarker, brief, upload, and AI component state cannot cross
+into the next account.
 
 ## PDF report upload
 
 The client can select one PDF on web, Android, or iOS and send it to
 `POST /reports/process-and-save` as multipart form data. Reports are limited to
-10 MiB. Uploading requires a reachable MedInsight backend and does not require
-client-side secrets.
+10 MiB. Uploading requires an authenticated session and a reachable MedInsight
+backend. The server derives report ownership from the verified token rather than
+from client-supplied identity.
 
 ## Validation
 
@@ -56,4 +71,6 @@ npx expo export --platform web
 Scanned-report OCR is performed locally by the configured backend when needed;
 the client does not call a cloud OCR service. AI provider credentials remain on
 the backend and explanation responses are not stored by the client.
-Authentication is intentionally not included yet.
+Email/password authentication, guarded routes, persistent sessions, and sign-out
+are included. Social login, MFA, password-reset UI, profiles, and roles remain
+outside the current scope.

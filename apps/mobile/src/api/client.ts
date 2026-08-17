@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { getSupabaseClient } from '@/auth/supabase';
+
 const LOCAL_WEB_API_URL = 'http://127.0.0.1:8000';
 
 type FetchImplementation = typeof fetch;
@@ -96,8 +98,44 @@ async function requestJson<T>(
 ) {
   let response: Response;
 
+  const sessionResult = await getSupabaseClient().auth.getSession();
+  const accessToken = sessionResult.data.session?.access_token;
+  if (!accessToken) {
+    throw new ApiError({
+      message: 'Your session has expired. Please sign in again.',
+      endpoint,
+      status: 401,
+    });
+  }
+
+  const authenticatedInit: RequestInit = {
+    ...init,
+    headers: {
+      ...Object.fromEntries(new Headers(init.headers).entries()),
+      Authorization: `Bearer ${accessToken}`,
+    },
+  };
+
   try {
-    response = await fetchImplementation(buildUrl(endpoint), init);
+    response = await fetchImplementation(buildUrl(endpoint), authenticatedInit);
+    if (response.status === 401) {
+      const refreshed = await getSupabaseClient().auth.refreshSession();
+      const refreshedToken = refreshed.data.session?.access_token;
+      if (!refreshedToken) {
+        await getSupabaseClient().auth.signOut({ scope: 'local' });
+      } else {
+        response = await fetchImplementation(buildUrl(endpoint), {
+          ...authenticatedInit,
+          headers: {
+            ...Object.fromEntries(new Headers(authenticatedInit.headers).entries()),
+            Authorization: `Bearer ${refreshedToken}`,
+          },
+        });
+      }
+      if (response.status === 401) {
+        await getSupabaseClient().auth.signOut({ scope: 'local' });
+      }
+    }
   } catch (error) {
     if (error instanceof ApiError) throw error;
     throw new ApiError({

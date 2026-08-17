@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ...auth import AuthenticatedUser, get_current_user
 from ...biomarkers import (
     Biomarker,
     BiomarkerParseResult,
@@ -134,7 +135,10 @@ def _extract_pdf_or_http_error(pdf_bytes: bytes) -> ReportTextExtractionResult:
     response_model=ReportUploadResponse,
     status_code=status.HTTP_200_OK,
 )
-async def upload_report(file: UploadFile) -> ReportUploadResponse:
+async def upload_report(
+    file: UploadFile,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> ReportUploadResponse:
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -166,7 +170,10 @@ async def upload_report(file: UploadFile) -> ReportUploadResponse:
 
 
 @router.post("/extract", response_model=ReportExtractionResponse)
-async def extract_report(file: UploadFile) -> ReportExtractionResponse:
+async def extract_report(
+    file: UploadFile,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> ReportExtractionResponse:
     filename, pdf_bytes = await _read_pdf_upload(file)
     extraction = _extract_pdf_or_http_error(pdf_bytes)
 
@@ -182,12 +189,18 @@ async def extract_report(file: UploadFile) -> ReportExtractionResponse:
 
 
 @router.post("/biomarkers", response_model=BiomarkerParseResult)
-def extract_biomarkers(payload: BiomarkerTextRequest) -> BiomarkerParseResult:
+def extract_biomarkers(
+    payload: BiomarkerTextRequest,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> BiomarkerParseResult:
     return parse_biomarkers(payload.text)
 
 
 @router.post("/process", response_model=ReportProcessingResponse)
-async def process_report(file: UploadFile) -> ReportProcessingResponse:
+async def process_report(
+    file: UploadFile,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> ReportProcessingResponse:
     filename, pdf_bytes = await _read_pdf_upload(file)
     extraction = _extract_pdf_or_http_error(pdf_bytes)
 
@@ -236,10 +249,12 @@ def _report_summary(report: Report) -> SavedReportSummary:
 async def process_and_save_report(
     file: UploadFile,
     session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> ProcessAndSaveResponse:
-    result = await process_report(file)
+    result = await process_report(file, current_user)
     report = save_processed_report(
         session,
+        user_id=current_user.id,
         filename=result.filename,
         page_count=result.page_count,
         character_count=result.character_count,
@@ -252,16 +267,21 @@ async def process_and_save_report(
 @router.get("", response_model=list[SavedReportSummary])
 def get_reports(
     session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> list[SavedReportSummary]:
-    return [_report_summary(report) for report in list_saved_reports(session)]
+    return [
+        _report_summary(report)
+        for report in list_saved_reports(session, current_user.id)
+    ]
 
 
 @router.get("/{report_id}", response_model=SavedReportDetail)
 def get_report(
     report_id: int,
     session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> SavedReportDetail:
-    report = get_saved_report(session, report_id)
+    report = get_saved_report(session, current_user.id, report_id)
     if report is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -16,6 +16,7 @@ from backend.app.db import Base, BiomarkerResult, Report, create_database_engine
 from backend.tests.test_report_extraction import make_pdf
 from backend.tests.test_reports import make_upload
 from backend.tests.test_ocr import make_ocr_result
+from backend.tests.auth_helpers import USER_A
 
 
 class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
@@ -43,6 +44,7 @@ class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
         response = await process_and_save_report(
             make_upload("report.pdf", "application/pdf", pdf_bytes),
             self.session,
+            USER_A,
         )
 
         self.assertGreater(response.report_id, 0)
@@ -64,10 +66,11 @@ class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
                 make_pdf("LDL Cholesterol 167 mg/dL <100"),
             ),
             self.session,
+            USER_A,
         )
 
-        reports = get_reports(self.session)
-        detail = get_report(saved.report_id, self.session)
+        reports = get_reports(self.session, USER_A)
+        detail = get_report(saved.report_id, self.session, USER_A)
 
         self.assertEqual(len(reports), 1)
         self.assertEqual(reports[0].id, saved.report_id)
@@ -78,7 +81,7 @@ class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
 
     def test_missing_report_returns_404(self) -> None:
         with self.assertRaises(HTTPException) as context:
-            get_report(999, self.session)
+            get_report(999, self.session, USER_A)
 
         self.assertEqual(context.exception.status_code, 404)
 
@@ -90,9 +93,10 @@ class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
             response = await process_and_save_report(
                 make_upload("scan.pdf", "application/pdf", make_pdf("")),
                 self.session,
+                USER_A,
             )
 
-        detail = get_report(response.report_id, self.session)
+        detail = get_report(response.report_id, self.session, USER_A)
         self.assertTrue(detail.requires_ocr)
         self.assertEqual(detail.biomarker_count, 0)
         self.assertEqual(detail.biomarkers, [])
@@ -109,9 +113,10 @@ class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
             response = await process_and_save_report(
                 make_upload("scan.pdf", "application/pdf", make_pdf("", "")),
                 self.session,
+                USER_A,
             )
 
-        detail = get_report(response.report_id, self.session)
+        detail = get_report(response.report_id, self.session, USER_A)
         saved_report = self.session.get(Report, response.report_id)
         self.assertTrue(response.result.requires_ocr)
         self.assertTrue(response.result.ocr_used)
@@ -125,6 +130,7 @@ class ReportPersistenceTests(unittest.IsolatedAsyncioTestCase):
                 "page_count",
                 "character_count",
                 "requires_ocr",
+                "user_id",
             },
         )
         self.assertFalse(hasattr(saved_report, "text"))

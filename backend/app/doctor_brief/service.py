@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -115,9 +116,11 @@ def _build_questions(
     return questions
 
 
-def build_doctor_visit_brief(session: Session) -> DoctorVisitBriefResponse:
-    statistics = get_report_statistics(session)
-    saved_reports = list_saved_reports(session)
+def build_doctor_visit_brief(
+    session: Session, user_id: UUID
+) -> DoctorVisitBriefResponse:
+    statistics = get_report_statistics(session, user_id)
+    saved_reports = list_saved_reports(session, user_id)
     recent_reports = [
         BriefRecentReport(
             report_id=report.id,
@@ -131,11 +134,11 @@ def build_doctor_visit_brief(session: Session) -> DoctorVisitBriefResponse:
 
     latest_measurements: list[BriefMeasurement] = []
     trends: list[BriefTrend] = []
-    for overview in list_biomarker_overviews(session):
+    for overview in list_biomarker_overviews(session, user_id):
         definition = BIOMARKERS_BY_NORMALIZED_NAME.get(overview.normalized_name)
         if definition is None:
             continue
-        history = get_biomarker_history(session, overview.normalized_name)
+        history = get_biomarker_history(session, user_id, overview.normalized_name)
         if not history:
             continue
         latest = history[-1]

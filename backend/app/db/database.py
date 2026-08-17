@@ -30,7 +30,11 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 
 def initialize_database(database_engine: Engine = engine) -> None:
     url = make_url(str(database_engine.url))
-    if url.get_backend_name() == "sqlite" and url.database not in (None, ":memory:"):
+    if url.get_backend_name() != "sqlite":
+        # Deployed databases are schema-managed exclusively through Alembic.
+        return
+
+    if url.database not in (None, ":memory:"):
         Path(url.database).parent.mkdir(parents=True, exist_ok=True)
 
     from . import models  # noqa: F401

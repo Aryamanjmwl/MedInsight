@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ...auth import AuthenticatedUser, get_current_user
 from ...biomarkers import BiomarkerStatus
 from ...db import (
     get_biomarker_history,
@@ -39,9 +40,10 @@ class DashboardSummaryResponse(BaseModel):
 @router.get("/summary", response_model=DashboardSummaryResponse)
 def dashboard_summary(
     session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> DashboardSummaryResponse:
-    report_statistics = get_report_statistics(session)
-    overviews = list_biomarker_overviews(session)
+    report_statistics = get_report_statistics(session, current_user.id)
+    overviews = list_biomarker_overviews(session, current_user.id)
     latest_biomarkers = sorted(
         (
             DashboardBiomarkerSummary.model_validate(item, from_attributes=True)
@@ -55,7 +57,9 @@ def dashboard_summary(
     for overview in overviews:
         if overview.measurement_count < 2:
             continue
-        history = get_biomarker_history(session, overview.normalized_name)
+        history = get_biomarker_history(
+            session, current_user.id, overview.normalized_name
+        )
         trend = calculate_trend(overview.normalized_name, history)
         if (
             trend.comparable_units
@@ -79,5 +83,6 @@ def dashboard_summary(
 @router.get("/doctor-brief", response_model=DoctorVisitBriefResponse)
 def doctor_visit_brief(
     session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> DoctorVisitBriefResponse:
-    return build_doctor_visit_brief(session)
+    return build_doctor_visit_brief(session, current_user.id)

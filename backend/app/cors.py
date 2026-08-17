@@ -10,7 +10,7 @@ DEFAULT_CORS_ORIGINS = (
     "http://127.0.0.1:8081",
 )
 CORS_ALLOWED_METHODS = ("GET", "POST", "OPTIONS")
-CORS_ALLOWED_HEADERS = ("Accept", "Content-Type")
+CORS_ALLOWED_HEADERS = ("Accept", "Authorization", "Content-Type")
 
 
 def parse_cors_origins(value: str) -> list[str]:

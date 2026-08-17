@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -43,6 +44,7 @@ class ReportStatistics:
 def save_processed_report(
     session: Session,
     *,
+    user_id: UUID,
     filename: str,
     page_count: int,
     character_count: int,
@@ -50,6 +52,7 @@ def save_processed_report(
     biomarkers: list[Biomarker],
 ) -> Report:
     report = Report(
+        user_id=user_id,
         filename=filename,
         page_count=page_count,
         character_count=character_count,
@@ -82,31 +85,35 @@ def save_processed_report(
     return report
 
 
-def list_saved_reports(session: Session) -> Sequence[Report]:
+def list_saved_reports(session: Session, user_id: UUID) -> Sequence[Report]:
     statement = (
         select(Report)
+        .where(Report.user_id == user_id)
         .options(selectinload(Report.biomarkers))
         .order_by(Report.uploaded_at.desc(), Report.id.desc())
     )
     return session.scalars(statement).all()
 
 
-def get_saved_report(session: Session, report_id: int) -> Report | None:
+def get_saved_report(session: Session, user_id: UUID, report_id: int) -> Report | None:
     statement = (
         select(Report)
-        .where(Report.id == report_id)
+        .where(Report.id == report_id, Report.user_id == user_id)
         .options(selectinload(Report.biomarkers))
     )
     return session.scalar(statement)
 
 
 def get_biomarker_history(
-    session: Session, normalized_name: str
+    session: Session, user_id: UUID, normalized_name: str
 ) -> list[BiomarkerHistoryRecord]:
     statement = (
         select(BiomarkerResult, Report.uploaded_at)
         .join(Report, BiomarkerResult.report_id == Report.id)
-        .where(BiomarkerResult.normalized_name == normalized_name)
+        .where(
+            Report.user_id == user_id,
+            BiomarkerResult.normalized_name == normalized_name,
+        )
         .order_by(
             Report.uploaded_at.asc(),
             Report.id.asc(),
@@ -130,10 +137,13 @@ def get_biomarker_history(
     ]
 
 
-def list_biomarker_overviews(session: Session) -> list[BiomarkerOverviewRecord]:
+def list_biomarker_overviews(
+    session: Session, user_id: UUID
+) -> list[BiomarkerOverviewRecord]:
     statement = (
         select(BiomarkerResult, Report.uploaded_at)
         .join(Report, BiomarkerResult.report_id == Report.id)
+        .where(Report.user_id == user_id)
         .order_by(
             BiomarkerResult.normalized_name.asc(),
             Report.uploaded_at.desc(),
@@ -165,8 +175,10 @@ def list_biomarker_overviews(session: Session) -> list[BiomarkerOverviewRecord]:
     ]
 
 
-def get_report_statistics(session: Session) -> ReportStatistics:
-    statement = select(func.count(Report.id), func.max(Report.uploaded_at))
+def get_report_statistics(session: Session, user_id: UUID) -> ReportStatistics:
+    statement = select(func.count(Report.id), func.max(Report.uploaded_at)).where(
+        Report.user_id == user_id
+    )
     total_reports, latest_report_date = session.execute(statement).one()
     return ReportStatistics(
         total_reports=total_reports,

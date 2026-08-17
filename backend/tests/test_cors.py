@@ -130,7 +130,7 @@ class CorsMiddlewareTests(unittest.IsolatedAsyncioTestCase):
             {
                 "Origin": ALLOWED_ORIGIN,
                 "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "Content-Type, Accept",
+                "Access-Control-Request-Headers": "Content-Type, Accept, Authorization",
             },
         )
 
@@ -139,6 +139,7 @@ class CorsMiddlewareTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("POST", headers.get("access-control-allow-methods", ""))
         self.assertIn("Accept", headers.get("access-control-allow-headers", ""))
         self.assertIn("Content-Type", headers.get("access-control-allow-headers", ""))
+        self.assertIn("Authorization", headers.get("access-control-allow-headers", ""))
 
 
 if __name__ == "__main__":
