@@ -54,3 +54,21 @@ additive `ocr_used` response field reports whether OCR actually ran. Raw PDFs,
 page images, and full extracted/OCR text are not persisted. OCR quality depends
 on scan resolution, orientation, contrast, layout, and installed language data;
 it does not imply diagnostic accuracy.
+
+## Deterministic biomarker extraction
+
+MedInsight uses format-tolerant deterministic extraction for common laboratory
+report layouts and preserves source evidence for every extracted measurement.
+The parser recognizes a curated vocabulary of 36 common biomarkers through
+explicit aliases, then handles common single-line, whitespace/pipe table,
+dot-leader, and short multi-line layouts. It supports decimal points and decimal
+commas, carefully constrained thousands grouping, common laboratory units, and
+report-supplied ranges or comparison thresholds.
+
+Units are normalized only when their spelling is safely equivalent; values are
+not converted between units. A measurement without a usable printed reference
+is retained with an `unknown` status. Missing units, ambiguous numbers, unknown
+analytes, and uncertain layouts are rejected instead of guessed. This bounded
+parser improves coverage of common formats but does not claim to support every
+laboratory, analyte, or report layout. Not every possible laboratory format or
+analyte is guaranteed to be recognized.
