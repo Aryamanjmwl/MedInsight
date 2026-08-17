@@ -76,6 +76,16 @@ export interface BiomarkerHistoryResponse {
   history: BiomarkerHistoryItem[];
 }
 
+export interface BiomarkerExplanation {
+  summary: string;
+  what_it_measures: string;
+  result_context: string;
+  possible_context: string[];
+  trend_context: string | null;
+  questions_for_doctor: string[];
+  safety_note: string;
+}
+
 export interface TrendResult {
   normalized_name: string;
   measurement_count: number;

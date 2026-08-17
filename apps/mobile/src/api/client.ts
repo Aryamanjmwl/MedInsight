@@ -124,6 +124,20 @@ export async function getJson<T>(
   );
 }
 
+export function postJson<T>(
+  endpoint: string,
+  fetchImplementation: FetchImplementation = globalThis.fetch,
+) {
+  return requestJson<T>(
+    endpoint,
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    },
+    fetchImplementation,
+  );
+}
+
 export function postFormData<T>(
   endpoint: string,
   formData: FormData,

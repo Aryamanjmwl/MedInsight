@@ -1,7 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import type { BiomarkerHistoryResponse, BiomarkerOverview, TrendResult } from '@/api';
+import { ApiError, explainBiomarker, type BiomarkerExplanation, type BiomarkerHistoryResponse, type BiomarkerOverview, type TrendResult } from '@/api';
 import { AppText } from '@/components/app-text';
+import { BiomarkerExplanationPanel } from '@/components/biomarker-explanation-panel';
 import { getBiomarkerStatusLabel, getStatusColor } from '@/components/status-utils';
 import { TrendTrack } from '@/components/trend-track';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
@@ -19,6 +21,36 @@ type BiomarkerDetailPanelProps = {
 
 export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error, onRetry }: BiomarkerDetailPanelProps) {
   const { isCompact } = useResponsiveLayout();
+  const [explanation, setExplanation] = useState<BiomarkerExplanation | null>(null);
+  const [explanationLoading, setExplanationLoading] = useState(false);
+  const [explanationError, setExplanationError] = useState<ApiError | null>(null);
+  const explanationRequestId = useRef(0);
+
+  useEffect(() => {
+    explanationRequestId.current += 1;
+    setExplanation(null);
+    setExplanationLoading(false);
+    setExplanationError(null);
+  }, [biomarker.normalized_name]);
+
+  const requestExplanation = async () => {
+    const currentRequest = ++explanationRequestId.current;
+    setExplanationLoading(true);
+    setExplanationError(null);
+    try {
+      const response = await explainBiomarker(biomarker.normalized_name);
+      if (currentRequest === explanationRequestId.current) setExplanation(response);
+    } catch (requestError) {
+      if (currentRequest !== explanationRequestId.current) return;
+      setExplanationError(
+        requestError instanceof ApiError
+          ? requestError
+          : new ApiError({ message: 'Unable to load an explanation.', endpoint: `/biomarkers/${biomarker.normalized_name}/explain` }),
+      );
+    } finally {
+      if (currentRequest === explanationRequestId.current) setExplanationLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -99,6 +131,13 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
 
         {!mixedUnits && chartPoints.length > 0 && chartUnit ? <TrendTrack points={chartPoints} unit={chartUnit} color={colors.brand} maxVisibleLabels={isCompact ? 4 : 6} /> : null}
       </View>
+
+      <BiomarkerExplanationPanel
+        explanation={explanation}
+        loading={explanationLoading}
+        error={explanationError}
+        onRequest={() => void requestExplanation()}
+      />
 
       <View style={styles.historySection}>
         <View style={styles.historyHeading}>

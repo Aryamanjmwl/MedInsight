@@ -1,4 +1,5 @@
 fastapi==0.141.1
+openai==3.1.0
 Pillow==12.3.0
 pypdf==6.14.2
 pypdfium2==5.12.1

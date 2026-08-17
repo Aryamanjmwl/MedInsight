@@ -72,3 +72,43 @@ analytes, and uncertain layouts are rejected instead of guessed. This bounded
 parser improves coverage of common formats but does not claim to support every
 laboratory, analyte, or report layout. Not every possible laboratory format or
 analyte is guaranteed to be recognized.
+
+## AI biomarker explanations
+
+MedInsight can generate a compact educational explanation for one saved
+biomarker through `POST /biomarkers/{normalized_name}/explain`. The deterministic
+parser, report-provided reference data, status classification, dates, and trend
+engine remain the source of truth. The AI receives only an allowlisted structured
+payload for that biomarker; it does not receive the filename, report ID,
+`source_text`, extracted report text, OCR images, or raw PDF bytes, and it does
+not calculate status or reference ranges.
+
+The backend uses the official OpenAI Python SDK and Responses API with validated
+structured output. Configure the server process—not the Expo client—with:
+
+```powershell
+$env:OPENAI_API_KEY="your-server-side-key"
+$env:MEDINSIGHT_AI_MODEL="gpt-5.6"
+```
+
+`MEDINSIGHT_AI_MODEL` defaults to `gpt-5.6`. If `OPENAI_API_KEY` is absent, all
+deterministic features remain available and only the explanation endpoint
+returns HTTP 503. Never place the key in an `EXPO_PUBLIC_*` variable or commit it
+to an environment file.
+
+Explanation requests use `store=False`, and MedInsight does not persist prompts,
+responses, or token usage in its database or client storage. This setting does
+not imply zero retention: OpenAI still processes request data under its
+[API data controls and retention policies](https://developers.openai.com/api/docs/guides/your-data).
+The current database is not user-scoped because authentication has not yet been
+implemented; per-user access control is required before multi-user deployment.
+
+AI explanations are educational, not diagnostic, and do not provide treatment
+or medication advice. Generative responses can contain errors and should be
+interpreted with the user's overall medical history and a healthcare
+professional. This first version combines the structured result with cautious
+general model knowledge; curated internal reference notes are a possible later
+grounding enhancement. The implementation uses the
+[Responses API structured-output interface](https://developers.openai.com/api/docs/guides/structured-outputs)
+and does not provide chat, report-wide reasoning, web browsing, agents, or a
+vector database.

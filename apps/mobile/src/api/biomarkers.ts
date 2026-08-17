@@ -1,11 +1,12 @@
-import { getJson } from '@/api/client';
+import { getJson, postJson } from '@/api/client';
 import type {
+  BiomarkerExplanation,
   BiomarkerHistoryResponse,
   BiomarkerOverview,
   TrendResult,
 } from '@/api/types';
 
-function biomarkerEndpoint(normalizedName: string, suffix: 'history' | 'trend') {
+function biomarkerEndpoint(normalizedName: string, suffix: 'history' | 'trend' | 'explain') {
   return `/biomarkers/${encodeURIComponent(normalizedName)}/${suffix}`;
 }
 
@@ -19,4 +20,8 @@ export function getBiomarkerHistory(normalizedName: string) {
 
 export function getBiomarkerTrend(normalizedName: string) {
   return getJson<TrendResult>(biomarkerEndpoint(normalizedName, 'trend'));
+}
+
+export function explainBiomarker(normalizedName: string) {
+  return postJson<BiomarkerExplanation>(biomarkerEndpoint(normalizedName, 'explain'));
 }

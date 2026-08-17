@@ -50,7 +50,9 @@ npx expo export --platform web
 - Responsive web support
 - Real dashboard, reports, and biomarker data
 - PDF processing and saved-report upload
+- Ephemeral, contextual AI explanations for individual saved biomarkers
 
 Scanned-report OCR is performed locally by the configured backend when needed;
-the client does not call a cloud OCR service. Authentication and AI features
-are intentionally not included yet.
+the client does not call a cloud OCR service. AI provider credentials remain on
+the backend and explanation responses are not stored by the client.
+Authentication is intentionally not included yet.
