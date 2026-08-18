@@ -10,7 +10,8 @@ import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
 import { useReportUploadDialog } from '@/context/report-upload-context';
-import { colors, radii, spacing } from '@/theme';
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
+import { colors, spacing } from '@/theme';
 
 type Filter = 'all' | 'attention' | 'normal';
 const filters: { id: Filter; label: string }[] = [
@@ -26,6 +27,7 @@ function matchesFilter(status: BiomarkerStatus, filter: Filter) {
 }
 
 export default function BiomarkersScreen() {
+  const { isDesktop } = useResponsiveLayout();
   const { revision } = useHealthDataRefresh();
   const { openReportUpload } = useReportUploadDialog();
   const [biomarkers, setBiomarkers] = useState<BiomarkerOverview[] | null>(null);
@@ -41,6 +43,7 @@ export default function BiomarkersScreen() {
   const overviewRequestId = useRef(0);
   const detailRequestId = useRef(0);
   const selectedNameRef = useRef<string | null>(null);
+  const selectionTouchedRef = useRef(false);
   const handledRevision = useRef(revision);
 
   const loadBiomarkerDetail = useCallback(async (normalizedName: string) => {
@@ -120,6 +123,7 @@ export default function BiomarkersScreen() {
   }, [loadBiomarkerOverview, revision]);
 
   const clearSelection = () => {
+    selectionTouchedRef.current = true;
     detailRequestId.current += 1;
     selectedNameRef.current = null;
     setSelectedName(null);
@@ -128,6 +132,7 @@ export default function BiomarkersScreen() {
   };
 
   const selectBiomarker = (normalizedName: string) => {
+    selectionTouchedRef.current = true;
     if (selectedNameRef.current === normalizedName) {
       clearSelection();
       return;
@@ -154,6 +159,22 @@ export default function BiomarkersScreen() {
     () => (biomarkers ?? []).filter(({ latest_status }) => matchesFilter(latest_status, filter)),
     [biomarkers, filter],
   );
+  const selectedBiomarker = biomarkers?.find(({ normalized_name }) => normalized_name === selectedName);
+
+  useEffect(() => {
+    if (!isDesktop || !visibleBiomarkers.length || selectedNameRef.current || selectionTouchedRef.current) return;
+
+    const firstName = visibleBiomarkers[0].normalized_name;
+    selectedNameRef.current = firstName;
+    setSelectedName(firstName);
+    setDetailErrorName(null);
+    if (historyCache[firstName] && trendCache[firstName]) {
+      detailRequestId.current += 1;
+      setDetailLoadingName(null);
+    } else {
+      void loadBiomarkerDetail(firstName);
+    }
+  }, [isDesktop, loadBiomarkerDetail, visibleBiomarkers]);
 
   return (
     <Screen>
@@ -164,7 +185,7 @@ export default function BiomarkersScreen() {
             <AppText variant="metadata" color="textMuted">Latest Measurements</AppText>
             <AppText variant="caption" color="textMuted">{visibleBiomarkers.length} shown</AppText>
           </View>
-          <Pressable accessibilityRole="button" disabled={refreshing} onPress={() => void loadBiomarkerOverview(true)} style={({ pressed, hovered }) => [styles.refresh, (pressed || hovered) && styles.active]}>
+          <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={() => void loadBiomarkerOverview(true)} style={({ pressed, hovered }) => [styles.refresh, (pressed || hovered) && styles.active]}>
             {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}
           </Pressable>
         </View>
@@ -183,12 +204,13 @@ export default function BiomarkersScreen() {
         {overviewError && biomarkers === null ? <BiomarkersErrorState onRetry={() => void loadBiomarkerOverview()} /> : null}
         {biomarkers?.length === 0 ? <BiomarkersEmptyState refreshing={refreshing} refreshFailed={overviewError !== null} onUpload={openReportUpload} onRefresh={() => void loadBiomarkerOverview(true)} /> : null}
         {biomarkers && biomarkers.length > 0 ? (
-          <View style={styles.list}>
+          <View style={[styles.explorer, isDesktop && styles.desktopExplorer]}>
+          <View style={[styles.list, isDesktop && styles.desktopList]}>
             {overviewError ? <BiomarkersRefreshError onRetry={() => void loadBiomarkerOverview(true)} /> : null}
             {visibleBiomarkers.length === 0 ? <NoBiomarkersInFilter /> : visibleBiomarkers.map((biomarker) => (
               <Fragment key={biomarker.normalized_name}>
                 <BiomarkerRow biomarker={biomarker} selected={selectedName === biomarker.normalized_name} onPress={() => selectBiomarker(biomarker.normalized_name)} />
-                {selectedName === biomarker.normalized_name ? (
+                {!isDesktop && selectedName === biomarker.normalized_name ? (
                   <BiomarkerDetailPanel
                     biomarker={biomarker}
                     history={historyCache[biomarker.normalized_name]}
@@ -201,6 +223,19 @@ export default function BiomarkersScreen() {
               </Fragment>
             ))}
           </View>
+          {isDesktop && selectedBiomarker ? (
+            <View style={styles.detailPane}>
+              <BiomarkerDetailPanel
+                biomarker={selectedBiomarker}
+                history={historyCache[selectedBiomarker.normalized_name]}
+                trend={trendCache[selectedBiomarker.normalized_name]}
+                loading={detailLoadingName === selectedBiomarker.normalized_name}
+                error={detailErrorName === selectedBiomarker.normalized_name}
+                onRetry={() => void loadBiomarkerDetail(selectedBiomarker.normalized_name)}
+              />
+            </View>
+          ) : null}
+          </View>
         ) : null}
       </View>
     </Screen>
@@ -208,12 +243,16 @@ export default function BiomarkersScreen() {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: spacing.md },
+  section: { gap: spacing.lg },
   sectionHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md },
-  refresh: { minWidth: 58, minHeight: 36, alignItems: 'center', justifyContent: 'center' }, active: { opacity: 0.65 },
+  refresh: { minWidth: 58, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, active: { opacity: 0.65 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: colors.border },
-  filter: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spacing.md, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  filter: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   activeFilter: { borderBottomColor: colors.textPrimary }, filterHovered: { backgroundColor: colors.surfaceMuted },
-  list: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface, overflow: 'hidden' },
+  explorer: { width: '100%' },
+  desktopExplorer: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xl },
+  list: { backgroundColor: colors.surface, borderTopWidth: 2, borderTopColor: colors.textPrimary, overflow: 'hidden' },
+  desktopList: { flex: 1.15 },
+  detailPane: { flex: 0.85, minWidth: 0 },
 });

@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { DashboardBiomarkerSummary, TrendResult } from '@/api';
@@ -9,6 +10,7 @@ import { formatMonthYear, formatValue } from '@/utils/formatting';
 type LatestMeasurementsProps = { biomarkers: DashboardBiomarkerSummary[]; trends: TrendResult[] };
 
 export function LatestMeasurements({ biomarkers, trends }: LatestMeasurementsProps) {
+  const router = useRouter();
   const trendsByName = new Map(trends.map((trend) => [trend.normalized_name, trend]));
   return (
     <View style={styles.section}>
@@ -22,6 +24,8 @@ export function LatestMeasurements({ biomarkers, trends }: LatestMeasurementsPro
               key={item.normalized_name}
               accessibilityRole="button"
               accessibilityLabel={`${item.test_name}, ${item.latest_value} ${item.latest_unit}, ${getStatusLabel(item.latest_status)}`}
+              accessibilityHint="Opens biomarker history"
+              onPress={() => router.push('/biomarkers')}
               style={({ pressed, hovered }) => [styles.row, (pressed || hovered) && styles.rowActive]}>
               <View style={styles.primaryRow}>
                 <AppText variant="label" style={styles.name}>{item.test_name}</AppText>
@@ -43,10 +47,10 @@ export function LatestMeasurements({ biomarkers, trends }: LatestMeasurementsPro
 }
 
 const styles = StyleSheet.create({
-  section: { gap: spacing.md }, list: { borderTopWidth: 1, borderTopColor: colors.border },
+  section: { gap: spacing.md, paddingTop: spacing.xl, borderTopWidth: 2, borderTopColor: colors.textPrimary }, list: {},
   row: { gap: spacing.sm, paddingVertical: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border }, rowActive: { backgroundColor: colors.surfaceMuted },
   primaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
   secondaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { flex: 1 }, value: { textAlign: 'right', fontVariant: ['tabular-nums'] }, context: { flex: 1 },
+  name: { flex: 1 }, value: { textAlign: 'right', fontSize: 18, lineHeight: 24, fontVariant: ['tabular-nums'] }, context: { flex: 1 },
 });

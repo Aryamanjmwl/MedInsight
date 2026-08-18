@@ -22,7 +22,7 @@ export function Screen({ children }: PropsWithChildren) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   scrollView: { flex: 1 },
-  scrollContent: { flexGrow: 1, alignItems: 'center', paddingBottom: spacing.huge },
-  content: { alignSelf: 'stretch', minWidth: 0, maxWidth: layout.contentMaxWidth, marginHorizontal: layout.mobileGutter, gap: spacing.xxl },
-  desktopContent: { alignSelf: 'center', width: '100%', marginHorizontal: 0, paddingHorizontal: layout.desktopGutter },
+  scrollContent: { flexGrow: 1, alignItems: 'center', paddingBottom: spacing.huge + spacing.lg },
+  content: { alignSelf: 'stretch', minWidth: 0, maxWidth: layout.contentMaxWidth, marginHorizontal: layout.mobileGutter, gap: spacing.xxxl },
+  desktopContent: { alignSelf: 'center', width: '100%', marginHorizontal: 0, paddingHorizontal: layout.desktopGutter, gap: spacing.xxxl },
 });

@@ -1,18 +1,21 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet, Text, View, type ColorValue } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { StyleSheet, View, type ColorValue } from 'react-native';
 
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
-import { colors, layout, radii, typography } from '@/theme';
+import { colors, radii, typography } from '@/theme';
 
 type TabIconProps = {
-  label: string;
+  name: keyof typeof Feather.glyphMap;
   color: ColorValue;
   focused: boolean;
 };
 
-function TabIcon({ label, color, focused }: TabIconProps) {
+function TabIcon({ name, color, focused }: TabIconProps) {
   return (
     <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
       style={[
         styles.tabIcon,
         {
@@ -20,7 +23,7 @@ function TabIcon({ label, color, focused }: TabIconProps) {
           backgroundColor: focused ? colors.brandMuted : colors.surface,
         },
       ]}>
-      <Text style={[styles.tabIconText, { color }]}>{label}</Text>
+      <Feather color={color} name={name} size={19} />
     </View>
   );
 }
@@ -41,35 +44,35 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: (props) => <TabIcon label="D" {...props} />,
+          tabBarIcon: (props) => <TabIcon name="home" {...props} />,
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
           title: 'Reports',
-          tabBarIcon: (props) => <TabIcon label="R" {...props} />,
+          tabBarIcon: (props) => <TabIcon name="file-text" {...props} />,
         }}
       />
       <Tabs.Screen
         name="biomarkers"
         options={{
           title: 'Biomarkers',
-          tabBarIcon: (props) => <TabIcon label="B" {...props} />,
+          tabBarIcon: (props) => <TabIcon name="activity" {...props} />,
         }}
       />
       <Tabs.Screen
         name="brief"
         options={{
           title: 'Brief',
-          tabBarIcon: (props) => <TabIcon label="V" {...props} />,
+          tabBarIcon: (props) => <TabIcon name="clipboard" {...props} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: (props) => <TabIcon label="S" {...props} />,
+          tabBarIcon: (props) => <TabIcon name="settings" {...props} />,
         }}
       />
     </Tabs>
@@ -78,6 +81,9 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
+    height: 68,
+    paddingTop: 7,
+    paddingBottom: 7,
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
   },
@@ -85,15 +91,12 @@ const styles = StyleSheet.create({
     ...typography.caption,
   },
   tabIcon: {
-    width: layout.tabIconSize,
-    height: layout.tabIconSize,
+    width: 30,
+    height: 27,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderRadius: radii.sm,
-  },
-  tabIconText: {
-    fontSize: 11,
-    fontWeight: '700',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    borderRadius: radii.xs,
   },
 });

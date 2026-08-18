@@ -1,9 +1,10 @@
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import type { BiomarkerResult, BiomarkerStatus, SavedReportDetail, SavedReportSummary } from '@/api';
+import type { BiomarkerResult, SavedReportDetail, SavedReportSummary } from '@/api';
 import { AppText } from '@/components/app-text';
+import { getBiomarkerStatusLabel, getStatusColor } from '@/components/status-utils';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
-import { colors, radii, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { formatFullDate, formatValue } from '@/utils/formatting';
 
 type ReportDetailPanelProps = {
@@ -13,17 +14,6 @@ type ReportDetailPanelProps = {
   error: boolean;
   onRetry: () => void;
 };
-
-function statusLabel(status: BiomarkerStatus) {
-  if (status === 'unknown') return 'REFERENCE UNKNOWN';
-  return status.toUpperCase();
-}
-
-function statusColor(status: BiomarkerStatus) {
-  if (status === 'high') return colors.statusHigh;
-  if (status === 'low') return colors.statusLow;
-  return colors.textSecondary;
-}
 
 function referenceText(biomarker: BiomarkerResult) {
   const rawReference = biomarker.raw_reference.trim();
@@ -70,28 +60,28 @@ export function ReportDetailPanel({ report, detail, loading, error, onRetry }: R
   }
 
   return (
-    <View style={styles.panel}>
+    <View style={[styles.panel, isCompact && styles.compactPanel]}>
       <View style={styles.header}>
         <View style={styles.titleBlock}>
           <AppText variant="metadata" color="textMuted">Report Detail</AppText>
-          <AppText variant="section" selectable>{detail.filename}</AppText>
+          <AppText variant="section">Laboratory report</AppText>
+          <AppText variant="caption" color="textSecondary" selectable>{detail.filename}</AppText>
           <AppText variant="caption" color="textMuted">Uploaded {formatFullDate(detail.uploaded_at)}</AppText>
         </View>
-        {detail.requires_ocr ? <AppText variant="metadata" color="statusLow">Text review needed</AppText> : null}
+        {detail.requires_ocr ? <AppText variant="metadata" color="textMuted">OCR source</AppText> : null}
       </View>
 
       <View style={styles.summary}>
         <SummaryItem label="Pages" value={String(detail.page_count)} />
-        <SummaryItem label="Characters" value={formatValue(detail.character_count)} />
-        <SummaryItem label="Biomarkers" value={String(detail.biomarker_count)} />
-        <SummaryItem label="Machine-readable text" value={detail.requires_ocr ? 'Review needed' : 'Available'} />
+        <SummaryItem label="Measurements" value={String(detail.biomarker_count)} />
+        <SummaryItem label="Text source" value={detail.requires_ocr ? 'Recovered with OCR' : 'Machine-readable PDF'} />
       </View>
 
       <View style={styles.results}>
-        <AppText variant="metadata" color="textMuted">Stored Biomarkers</AppText>
+        <AppText variant="metadata" color="textMuted">Measurements</AppText>
         {detail.biomarkers.length ? detail.biomarkers.map((biomarker, index) => {
           const reference = referenceText(biomarker);
-          const color = statusColor(biomarker.status);
+          const color = getStatusColor(biomarker.status);
           return (
             <View key={`${biomarker.normalized_name}-${index}`} style={[styles.biomarkerRow, isCompact && styles.compactBiomarkerRow]}>
               <View style={styles.biomarkerName}>
@@ -99,8 +89,8 @@ export function ReportDetailPanel({ report, detail, loading, error, onRetry }: R
                 <AppText variant="caption" color="textMuted">{reference ? `Reference ${reference}` : 'Reference unavailable'}</AppText>
               </View>
               <View style={[styles.biomarkerValue, isCompact && styles.compactBiomarkerValue]}>
-                <AppText variant="bodyStrong" style={styles.numeric}>{formatValue(biomarker.value)} <AppText variant="caption" color="textMuted">{biomarker.unit}</AppText></AppText>
-                <AppText variant="metadata" style={{ color }}>{statusLabel(biomarker.status)}</AppText>
+                <AppText variant="measurementSmall" style={styles.numeric}>{formatValue(biomarker.value)} <AppText variant="caption" color="textMuted">{biomarker.unit}</AppText></AppText>
+                <AppText variant="metadata" style={{ color }}>{getBiomarkerStatusLabel(biomarker.status)}</AppText>
               </View>
             </View>
           );
@@ -122,7 +112,8 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  panel: { marginTop: -1, padding: spacing.xl, gap: spacing.xl, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, backgroundColor: colors.surface },
+  panel: { marginTop: -1, marginLeft: spacing.xxl, paddingVertical: spacing.xl, paddingHorizontal: spacing.xl, gap: spacing.xl, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  compactPanel: { marginLeft: 0, paddingHorizontal: spacing.lg },
   message: { minHeight: 110, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' },
   messageCopy: { gap: spacing.xs }, active: { opacity: 0.65 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.lg },

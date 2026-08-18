@@ -23,7 +23,7 @@ export function BiomarkersEmptyState({ refreshing, refreshFailed, onUpload, onRe
       {refreshFailed ? <AppText variant="caption" color="textSecondary">The biomarker list could not be refreshed.</AppText> : null}
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" onPress={onUpload} style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.active]}><AppText variant="label" color="textSecondary">Upload report</AppText></Pressable>
-        <Pressable accessibilityRole="button" disabled={refreshing} onPress={onRefresh} style={styles.refreshAction}>{refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}</Pressable>
+          <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={onRefresh} style={styles.refreshAction}>{refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}</Pressable>
       </View>
     </MessagePanel>
   );
@@ -46,13 +46,13 @@ function Action({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  loading: { minHeight: 300, gap: spacing.md, padding: spacing.xl, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface },
+  loading: { minHeight: 260, gap: spacing.md, padding: spacing.xl, borderTopWidth: 2, borderTopColor: colors.textPrimary, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
   loadingHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm }, loadingRow: { minHeight: 52, justifyContent: 'center', gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   longLine: { width: '48%', height: 1, backgroundColor: colors.border }, shortLine: { width: '28%', height: 1, backgroundColor: colors.border },
-  messagePanel: { minHeight: 260, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, padding: spacing.xxl, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface },
+  messagePanel: { minHeight: 190, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, paddingVertical: spacing.xxl, borderTopWidth: 2, borderTopColor: colors.textPrimary },
   copy: { maxWidth: 560 }, actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.lg },
-  upload: { minHeight: 42, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.sm },
-  refreshAction: { minWidth: 54, minHeight: 42, alignItems: 'center', justifyContent: 'center' }, active: { opacity: 0.65 },
+  upload: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.sm },
+  refreshAction: { minWidth: 54, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, active: { opacity: 0.65 },
   noMatches: { minHeight: 150, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.xs, padding: spacing.xl },
   refreshError: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.md, padding: spacing.md, borderLeftWidth: 2, borderLeftColor: colors.statusLow, backgroundColor: colors.statusLowMuted },
   refreshCopy: { flex: 1, minWidth: 220 },

@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/app-text';
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { spacing } from '@/theme';
 
 type PageHeaderProps = {
@@ -10,14 +11,15 @@ type PageHeaderProps = {
 };
 
 export function PageHeader({ title, description, eyebrow }: PageHeaderProps) {
+  const { isCompact } = useResponsiveLayout();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isCompact && styles.compactContainer]}>
       {eyebrow ? (
         <AppText variant="metadata" color="textMuted">
           {eyebrow.toUpperCase()}
         </AppText>
       ) : null}
-      <AppText variant="display">{title}</AppText>
+      <AppText variant={isCompact ? 'title' : 'display'}>{title}</AppText>
       <AppText color="textSecondary" style={styles.description}>
         {description}
       </AppText>
@@ -29,8 +31,9 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.sm,
     paddingTop: spacing.xxl,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
   },
+  compactContainer: { paddingTop: spacing.xl, paddingBottom: 0 },
   description: {
     maxWidth: 600,
   },

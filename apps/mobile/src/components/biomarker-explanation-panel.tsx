@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   panel: { gap: spacing.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surfaceSubtle },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.lg },
   headingCopy: { flex: 1, minWidth: 220, gap: spacing.xs },
-  action: { minHeight: 38, justifyContent: 'center', paddingHorizontal: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.brand },
+  action: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.brand },
   actionText: { color: colors.white },
   actionActive: { opacity: 0.68 },
   state: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

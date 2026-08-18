@@ -78,7 +78,7 @@ export default function DoctorBriefScreen() {
         <PageHeader title="Doctor Visit Brief" description="Generated from your saved lab record." />
         <StatePanel>
           <AppText variant="section">Unable to load your brief</AppText>
-          <AppText color="textSecondary">{error.message}</AppText>
+          <AppText color="textSecondary">We couldn’t reach MedInsight to prepare this brief right now.</AppText>
           <Action label="Try again" onPress={() => void loadBrief()} />
         </StatePanel>
       </Screen>
@@ -109,7 +109,7 @@ export default function DoctorBriefScreen() {
         <PageHeader title="Doctor Visit Brief" description="A factual appointment-preparation view generated from your saved lab record." eyebrow="Appointment preparation" />
         <View style={styles.refreshBlock}>
           <AppText variant="caption" color="textMuted">Generated {formatFullDate(brief.generated_at)}</AppText>
-          <Pressable accessibilityRole="button" disabled={refreshing} onPress={() => void loadBrief(true)} style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
+          <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={() => void loadBrief(true)} style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
             {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}
           </Pressable>
         </View>
@@ -123,6 +123,7 @@ export default function DoctorBriefScreen() {
             <OverviewFact label="Saved reports" value={String(brief.report_count)} />
             <OverviewFact label="Latest report" value={brief.latest_report_date ? formatFullDate(brief.latest_report_date) : 'Unavailable'} />
             <OverviewFact label="Latest biomarkers" value={String(brief.latest_measurements.length)} />
+            <OverviewFact label="Outside report range" value={String(brief.needs_attention.length)} />
           </View>
           <View style={styles.rows}>
             {brief.recent_reports.map((report) => (
@@ -235,10 +236,10 @@ const styles = StyleSheet.create({
   pageHeading: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.xl },
   compactHeading: { alignItems: 'flex-start', flexDirection: 'column', gap: 0 },
   refreshBlock: { alignItems: 'flex-end', gap: spacing.sm, paddingBottom: spacing.lg },
-  document: { borderTopWidth: 2, borderTopColor: colors.textPrimary, backgroundColor: colors.surface },
-  section: { flexDirection: 'row', gap: spacing.xxl, padding: spacing.xl, borderBottomWidth: 1, borderBottomColor: colors.border },
+  document: { width: '100%', maxWidth: 1080, alignSelf: 'center', borderTopWidth: 3, borderTopColor: colors.textPrimary, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
+  section: { flexDirection: 'row', gap: spacing.xxxl, paddingVertical: spacing.xxl, paddingHorizontal: spacing.xl, borderBottomWidth: 1, borderBottomColor: colors.border },
   compactSection: { flexDirection: 'column', gap: spacing.lg, padding: spacing.lg },
-  sectionHeading: { width: 220, maxWidth: '30%', gap: spacing.sm },
+  sectionHeading: { width: 210, maxWidth: '28%', gap: spacing.sm },
   compactSectionHeading: { width: '100%', maxWidth: '100%', flexDirection: 'row', alignItems: 'baseline', gap: spacing.md },
   sectionContent: { flex: 1, minWidth: 0, gap: spacing.lg },
   overview: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxl },
@@ -255,11 +256,11 @@ const styles = StyleSheet.create({
   unclassified: { gap: spacing.xs },
   question: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.lg, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   questionCopy: { flex: 1 },
-  limitations: { gap: spacing.sm, padding: spacing.xl, backgroundColor: colors.surfaceMuted },
+  limitations: { gap: spacing.sm, padding: spacing.xl, borderTopWidth: 1, borderTopColor: colors.borderStrong, backgroundColor: colors.surfaceSubtle },
   emptyCopy: { paddingVertical: spacing.md },
-  statePanel: { minHeight: 260, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, padding: spacing.xxl, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface },
+  statePanel: { minHeight: 180, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, maxWidth: 720, paddingVertical: spacing.xxl, borderTopWidth: 2, borderTopColor: colors.textPrimary },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg },
-  action: { minHeight: 38, justifyContent: 'center' },
+  action: { minHeight: 44, justifyContent: 'center' },
   outlinedAction: { paddingHorizontal: spacing.lg, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.sm },
   active: { opacity: 0.65 },
   refreshError: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg, padding: spacing.md, borderLeftWidth: 2, borderLeftColor: colors.statusLow, backgroundColor: colors.statusLowMuted },

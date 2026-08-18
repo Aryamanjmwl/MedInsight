@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import { ApiError, getReport, getReports, type SavedReportDetail, type SavedReportSummary } from '@/api';
 import { AppText } from '@/components/app-text';
@@ -26,7 +27,7 @@ function groupReportsByYear(reports: SavedReportSummary[]): ReportYearGroup[] {
 }
 
 export default function ReportsScreen() {
-  const { isCompact } = useResponsiveLayout();
+  const { isCompact, isDesktop } = useResponsiveLayout();
   const { revision } = useHealthDataRefresh();
   const { openReportUpload } = useReportUploadDialog();
   const [reports, setReports] = useState<SavedReportSummary[] | null>(null);
@@ -133,10 +134,10 @@ export default function ReportsScreen() {
 
   return (
     <Screen>
-      <PageHeader title="Reports" description="A chronological record of your laboratory reports." />
+      <PageHeader title="Reports" description="Your laboratory reports over time." eyebrow="Personal medical archive" />
       <View style={[styles.toolbar, isCompact && styles.compactToolbar]}>
-        <View style={styles.searchShell}>
-          <AppText color="textFaint" accessibilityElementsHidden>⌕</AppText>
+        <View style={[styles.searchShell, isCompact && styles.compactSearchShell]}>
+          <Feather accessibilityElementsHidden color={colors.textMuted} name="search" size={17} />
           <TextInput
             accessibilityLabel="Search reports by filename"
             autoCapitalize="none"
@@ -148,14 +149,21 @@ export default function ReportsScreen() {
             value={search}
             style={styles.searchInput}
           />
+          {search ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear report search" onPress={() => setSearch('')} style={styles.clearSearch}>
+              <Feather color={colors.textMuted} name="x" size={17} />
+            </Pressable>
+          ) : null}
         </View>
         <View style={styles.toolbarActions}>
-          <Pressable accessibilityRole="button" disabled={refreshing} onPress={() => void loadReports(true)} style={({ pressed, hovered }) => [styles.refresh, (pressed || hovered) && styles.controlActive]}>
+          <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={() => void loadReports(true)} style={({ pressed, hovered }) => [styles.refresh, (pressed || hovered) && styles.controlActive]}>
             {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={openReportUpload} style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.controlActive]}>
-            <AppText variant="label" color="textSecondary">Upload report</AppText>
-          </Pressable>
+          {!isDesktop ? (
+            <Pressable accessibilityRole="button" onPress={openReportUpload} style={({ pressed, hovered }) => [styles.upload, (pressed || hovered) && styles.controlActive]}>
+              <AppText variant="label" color="white">Upload report</AppText>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -194,15 +202,17 @@ export default function ReportsScreen() {
 }
 
 const styles = StyleSheet.create({
-  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.lg },
+  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xl, paddingBottom: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.borderStrong },
   compactToolbar: { alignItems: 'stretch', flexDirection: 'column' },
-  searchShell: { width: '100%', maxWidth: 420, minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, backgroundColor: colors.surface },
-  searchInput: { flex: 1, minHeight: 40, paddingVertical: 0, color: colors.textPrimary, fontFamily: 'System', fontSize: typography.body.fontSize },
+  searchShell: { width: '100%', maxWidth: 340, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radii.sm, backgroundColor: colors.surfaceSubtle },
+  compactSearchShell: { maxWidth: '100%' },
+  searchInput: { flex: 1, minHeight: 44, paddingVertical: 0, color: colors.textPrimary, fontFamily: 'System', fontSize: typography.body.fontSize },
+  clearSearch: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -spacing.md },
   toolbarActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md },
-  refresh: { minWidth: 58, minHeight: 42, alignItems: 'center', justifyContent: 'center' },
-  upload: { minHeight: 42, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.sm },
+  refresh: { minWidth: 58, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  upload: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.brand },
   controlActive: { borderColor: colors.textPrimary, opacity: 0.68 },
-  history: { gap: spacing.xxl }, yearGroup: { gap: spacing.md },
+  history: { gap: spacing.xxxl }, yearGroup: { gap: spacing.sm },
   yearHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   year: { fontVariant: ['tabular-nums'] }, yearRule: { flex: 1, height: 1, backgroundColor: colors.textPrimary },
 });

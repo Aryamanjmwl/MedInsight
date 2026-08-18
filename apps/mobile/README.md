@@ -26,14 +26,17 @@ the public Supabase project values:
 ```text
 EXPO_PUBLIC_API_URL=http://127.0.0.1:8000
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-public-key
 ```
 
 The web client falls back to this local URL when the variable is omitted. Native clients require an explicit URL because `127.0.0.1` may refer to the emulator or device itself. `EXPO_PUBLIC_*` variables are included in the public client bundle, so never store secrets, tokens, keys, or credentials in them.
 
-The anon/publishable key is intended for public client configuration; it is not
-the Supabase service-role secret. Never add a service-role key, database
-password, private JWT signing material, or OpenAI key to the Expo environment.
+The publishable key is intended for public client configuration; it is not the
+Supabase service-role secret. Existing development environments may continue to
+use `EXPO_PUBLIC_SUPABASE_ANON_KEY` as a backwards-compatible fallback, but new
+configuration should use `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Never add a
+service-role key, database password, private JWT signing material, or OpenAI key
+to the Expo environment.
 
 Supabase owns email/password identity and session issuance. MedInsight persists
 the session in Expo SecureStore on Android/iOS and supported browser storage on

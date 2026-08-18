@@ -2,22 +2,16 @@ import { StyleSheet, View } from 'react-native';
 
 import type { BiomarkerStatus } from '@/api';
 import { AppText } from '@/components/app-text';
-import { colors, radii, spacing } from '@/theme';
-
-const statusStyles = {
-  normal: { label: 'In range', text: colors.textMuted },
-  high: { label: 'High', text: colors.statusHigh },
-  low: { label: 'Low', text: colors.statusLow },
-  unknown: { label: 'Reference unknown', text: colors.textMuted },
-};
+import { getStatusColor, getStatusLabel } from '@/components/status-utils';
+import { radii, spacing } from '@/theme';
 
 export function StatusBadge({ status }: { status: BiomarkerStatus }) {
-  const statusStyle = statusStyles[status];
+  const textColor = getStatusColor(status);
   return (
     <View style={styles.badge}>
-      {status !== 'normal' ? <View style={[styles.marker, { backgroundColor: statusStyle.text }]} /> : null}
-      <AppText variant="metadata" style={{ color: statusStyle.text }}>
-        {statusStyle.label}
+      {status !== 'normal' ? <View style={[styles.marker, { backgroundColor: textColor }]} /> : null}
+      <AppText variant="metadata" style={{ color: textColor }}>
+        {getStatusLabel(status)}
       </AppText>
     </View>
   );

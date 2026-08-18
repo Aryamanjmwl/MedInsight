@@ -7,7 +7,7 @@ import { BiomarkerExplanationPanel } from '@/components/biomarker-explanation-pa
 import { getBiomarkerStatusLabel, getStatusColor } from '@/components/status-utils';
 import { TrendTrack } from '@/components/trend-track';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
-import { colors, radii, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { formatDayMonth, formatFullDate, formatReference, formatSignedValue, formatValue, getTrendArrow } from '@/utils/formatting';
 
 type BiomarkerDetailPanelProps = {
@@ -79,6 +79,8 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
   const mixedUnits = !trend.comparable_units || trend.issue === 'mixed_units';
   const insufficient = trend.direction === 'insufficient_data' || trend.measurement_count < 2;
   const chartUnit = trend.unit ?? history.history[0]?.unit;
+  const latestHistoryItem = history.history.at(-1);
+  const latestReference = latestHistoryItem ? formatReference(latestHistoryItem) : null;
   const chartPoints = history.history.map((item, index) => ({
     key: `${item.report_id}-${index}`,
     label: formatDayMonth(item.uploaded_at),
@@ -94,12 +96,17 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
           <AppText variant="caption" color="textMuted">Latest measurement · {formatFullDate(biomarker.latest_report_date)}</AppText>
         </View>
         <View style={[styles.latest, isCompact && styles.compactLatest]}>
-          <AppText variant="title" style={[styles.numeric, { color: biomarker.latest_status === 'normal' || biomarker.latest_status === 'unknown' ? colors.textPrimary : statusColor }]}>
+          <AppText variant="measurement" style={[styles.numeric, { color: biomarker.latest_status === 'normal' || biomarker.latest_status === 'unknown' ? colors.textPrimary : statusColor }]}>
             {formatValue(biomarker.latest_value)} <AppText color="textMuted">{biomarker.latest_unit}</AppText>
           </AppText>
           <AppText variant="metadata" style={{ color: statusColor }}>{getBiomarkerStatusLabel(biomarker.latest_status)}</AppText>
           <AppText variant="caption" color="textMuted">{biomarker.measurement_count} recorded {biomarker.measurement_count === 1 ? 'measurement' : 'measurements'}</AppText>
         </View>
+      </View>
+
+      <View style={styles.referenceBlock}>
+        <AppText variant="metadata" color="textFaint">Latest Report Reference</AppText>
+        <AppText variant="bodyStrong" color="textSecondary">{latestReference ?? 'Not available in the report'}{latestReference ? ` ${biomarker.latest_unit}` : ''}</AppText>
       </View>
 
       <View style={styles.trendSection}>
@@ -176,10 +183,11 @@ function Metric({ label, value, detail }: { label: string; value: string; detail
 }
 
 const styles = StyleSheet.create({
-  panel: { marginHorizontal: spacing.sm, marginBottom: spacing.md, padding: spacing.xl, gap: spacing.xl, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, backgroundColor: colors.surface },
+  panel: { padding: spacing.xl, gap: spacing.xl, borderTopWidth: 2, borderTopColor: colors.textPrimary, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
   message: { minHeight: 120, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }, messageCopy: { gap: spacing.xs }, active: { opacity: 0.65 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.xl }, compactHeader: { flexDirection: 'column' },
   titleBlock: { flex: 1, minWidth: 0, gap: spacing.xs }, latest: { alignItems: 'flex-end', gap: spacing.xs }, compactLatest: { alignItems: 'flex-start' }, numeric: { fontVariant: ['tabular-nums'] },
+  referenceBlock: { gap: spacing.xs, paddingVertical: spacing.md, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.borderSubtle },
   trendSection: { gap: spacing.md, paddingVertical: spacing.lg, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border },
   notice: { gap: spacing.xs, paddingVertical: spacing.lg }, trendSummary: { gap: spacing.lg }, direction: { gap: spacing.xs },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg }, metric: { minWidth: 140, flex: 1, gap: spacing.xs },

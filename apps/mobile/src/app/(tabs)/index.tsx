@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { ApiError, getDashboardSummary, type DashboardSummaryResponse } from '@/api';
+import { ApiError, getDashboardSummary, getReports, type DashboardSummaryResponse, type SavedReportSummary } from '@/api';
 import { BiomarkerExplorer } from '@/components/biomarker-explorer';
 import { DashboardEmptyState, DashboardErrorState, DashboardLoadingState, DashboardRefreshError } from '@/components/dashboard-request-states';
 import { HealthTimeline } from '@/components/health-timeline';
@@ -20,6 +20,7 @@ export default function DashboardScreen() {
   const { revision } = useHealthDataRefresh();
   const { openReportUpload } = useReportUploadDialog();
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
+  const [reports, setReports] = useState<SavedReportSummary[]>([]);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,8 +34,14 @@ export default function DashboardScreen() {
     else setLoading(true);
 
     try {
-      const response = await getDashboardSummary();
-      if (requestId.current === currentRequest) setSummary(response);
+      const [response, reportHistory] = await Promise.all([
+        getDashboardSummary(),
+        getReports().catch(() => []),
+      ]);
+      if (requestId.current === currentRequest) {
+        setSummary(response);
+        setReports(reportHistory);
+      }
     } catch (requestError) {
       if (requestId.current !== currentRequest) return;
       setError(requestError instanceof ApiError ? requestError : new ApiError({ message: 'Unable to load dashboard data.', endpoint: '/dashboard/summary' }));
@@ -83,14 +90,21 @@ export default function DashboardScreen() {
 
   return (
     <Screen>
-      <RecordHeader latestReportDate={summary.latest_report_date} refreshing={refreshing} onRefresh={() => void loadDashboard(true)} />
+      <RecordHeader
+        latestReportDate={summary.latest_report_date}
+        reportCount={summary.total_reports}
+        biomarkerCount={summary.total_distinct_biomarkers}
+        refreshing={refreshing}
+        onRefresh={() => void loadDashboard(true)}
+        onUpload={openReportUpload}
+      />
       {error ? <DashboardRefreshError onRetry={() => void loadDashboard(true)} /> : null}
       {isDesktop ? (
         <View style={styles.desktopGrid}>
           <View style={styles.mainColumn}>
-            <LatestReportPanel summary={summary} />
+            <LatestReportPanel summary={summary} report={reports[0]} />
             <BiomarkerExplorer trends={summary.trends} biomarkers={summary.latest_biomarkers} />
-            <HealthTimeline latestReportDate={summary.latest_report_date} totalReports={summary.total_reports} />
+            {reports.length ? <HealthTimeline reports={reports.slice(0, 5)} /> : null}
           </View>
           <View style={styles.supportingRail}>
             <NeedsAttention biomarkers={attentionBiomarkers.slice(0, 3)} totalCount={summary.abnormal_biomarker_count} />
@@ -99,11 +113,11 @@ export default function DashboardScreen() {
         </View>
       ) : (
         <View style={styles.mobileFlow}>
-          <LatestReportPanel summary={summary} />
+          <LatestReportPanel summary={summary} report={reports[0]} />
           <BiomarkerExplorer trends={summary.trends} biomarkers={summary.latest_biomarkers} />
           <NeedsAttention biomarkers={attentionBiomarkers.slice(0, 3)} totalCount={summary.abnormal_biomarker_count} />
           <LatestMeasurements biomarkers={latestBiomarkers} trends={summary.trends} />
-          <HealthTimeline latestReportDate={summary.latest_report_date} totalReports={summary.total_reports} />
+          {reports.length ? <HealthTimeline reports={reports.slice(0, 5)} /> : null}
         </View>
       )}
     </Screen>
@@ -111,8 +125,8 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  desktopGrid: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xl },
-  mainColumn: { flex: 1, minWidth: 0, gap: spacing.lg },
-  supportingRail: { width: layout.supportingRailWidth, maxWidth: '100%', gap: spacing.lg },
-  mobileFlow: { width: '100%', minWidth: 0, gap: spacing.xl },
+  desktopGrid: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xxxl },
+  mainColumn: { flex: 1, minWidth: 0, gap: spacing.xxl },
+  supportingRail: { width: layout.supportingRailWidth, maxWidth: '100%', gap: spacing.xxl },
+  mobileFlow: { width: '100%', minWidth: 0, gap: spacing.xxl },
 });

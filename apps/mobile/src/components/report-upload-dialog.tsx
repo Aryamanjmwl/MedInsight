@@ -28,16 +28,19 @@ export function ReportUploadDialog({ visible, phase, selectedFile, result, error
         <View accessibilityViewIsModal style={styles.dialog}>
           <View style={styles.header}>
             <View style={styles.titleBlock}>
-              <AppText variant="metadata" color="textMuted">PDF Upload</AppText>
-              <AppText variant="title">Process laboratory report</AppText>
+              <AppText variant="metadata" color="textMuted">Health Record</AppText>
+              <AppText variant="title">Upload laboratory report</AppText>
             </View>
             {!uploading ? <Pressable accessibilityRole="button" accessibilityLabel="Close report upload" onPress={onClose} style={({ pressed, hovered }) => [styles.close, (pressed || hovered) && styles.active]}><AppText variant="section" color="textMuted">×</AppText></Pressable> : null}
           </View>
 
           {phase === 'idle' ? (
             <View style={styles.content}>
-              <AppText color="textSecondary">Choose one machine-readable PDF laboratory report, up to 10 MB.</AppText>
-              <AppText variant="caption" color="textMuted">The selected file is sent to your configured MedInsight backend for processing.</AppText>
+              <AppText color="textSecondary">Your report will be processed to extract structured laboratory measurements.</AppText>
+              <View style={styles.selectorIntro}>
+                <View style={styles.fileMark}><AppText variant="metadata" color="textSecondary">PDF</AppText></View>
+                <View style={styles.fileCopy}><AppText variant="bodyStrong">Choose a PDF report</AppText><AppText variant="caption" color="textMuted">One file · Up to 10 MB</AppText></View>
+              </View>
               <View style={styles.actions}>
                 <PrimaryAction label="Choose PDF" onPress={() => void pickReport()} />
                 <SecondaryAction label="Cancel" onPress={onClose} />
@@ -52,6 +55,7 @@ export function ReportUploadDialog({ visible, phase, selectedFile, result, error
               <AppText variant="caption" color="textMuted">The selected file is sent to your configured MedInsight backend for processing.</AppText>
               <View style={styles.actions}>
                 <PrimaryAction label={phase === 'error' ? 'Try again' : 'Process report'} onPress={() => void processReport()} />
+                <SecondaryAction label="Replace PDF" onPress={() => void pickReport()} />
                 <SecondaryAction label="Cancel" onPress={onClose} />
               </View>
             </View>
@@ -61,8 +65,8 @@ export function ReportUploadDialog({ visible, phase, selectedFile, result, error
             <View style={[styles.content, styles.progress]} accessibilityLiveRegion="polite">
               <ActivityIndicator size="small" color={colors.brand} />
               <View style={styles.progressCopy}>
-                <AppText variant="section">Uploading and processing report…</AppText>
-                <AppText variant="caption" color="textMuted">This can take a moment while text and biomarkers are processed.</AppText>
+                <AppText variant="section">Processing laboratory report</AppText>
+                <AppText variant="caption" color="textMuted">Reading the document and extracting structured measurements. This can take a moment.</AppText>
               </View>
             </View>
           ) : null}
@@ -70,7 +74,7 @@ export function ReportUploadDialog({ visible, phase, selectedFile, result, error
           {phase === 'success' && result ? (
             <View style={styles.content} accessibilityLiveRegion="polite">
               <View style={styles.successMark} />
-              <AppText variant="section">Report processed</AppText>
+              <AppText variant="title">Report processed</AppText>
               <AppText variant="bodyStrong" selectable>{result.result.filename}</AppText>
               {result.result.requires_ocr && result.result.biomarker_count === 0 && result.result.unparsed_line_count === 0 ? (
                 <View style={styles.ocrNotice}>
@@ -120,7 +124,21 @@ function FileSummary({ file, sizeLabel }: { file: SelectedReportFile; sizeLabel:
 }
 
 function ErrorMessage({ message }: { message: string }) {
-  return <View style={styles.error}><AppText variant="label" color="statusHigh">Upload unavailable</AppText><AppText variant="caption" color="textSecondary">{message}</AppText></View>;
+  const normalized = message.toLocaleLowerCase('en-US');
+  const title = normalized.includes('larger') || normalized.includes('limit')
+    ? 'File too large'
+    : normalized.includes('unsupported') || normalized.includes('choose a pdf')
+      ? 'Unsupported file'
+      : normalized.includes('could not be processed')
+        ? 'PDF unreadable'
+        : normalized.includes('ocr')
+          ? 'OCR unavailable'
+          : normalized.includes('session')
+            ? 'Session expired'
+            : normalized.includes('reach') || normalized.includes('network')
+              ? 'Network unavailable'
+              : 'Processing failed';
+  return <View style={styles.error}><AppText variant="label" color="statusHigh">{title}</AppText><AppText variant="caption" color="textSecondary">{message}</AppText></View>;
 }
 
 function PrimaryAction({ label, onPress }: { label: string; onPress: () => void }) {
@@ -132,19 +150,20 @@ function SecondaryAction({ label, onPress }: { label: string; onPress: () => voi
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(26, 23, 20, 0.38)' },
-  dialog: { width: '100%', maxWidth: 520, maxHeight: '92%', padding: spacing.xl, gap: spacing.xl, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.md, backgroundColor: colors.surface },
+  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(24, 36, 45, 0.42)' },
+  dialog: { width: '100%', maxWidth: 540, maxHeight: '92%', padding: spacing.xl, gap: spacing.xl, borderTopWidth: 3, borderTopColor: colors.textPrimary, borderRadius: radii.sm, backgroundColor: colors.surface },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.lg }, titleBlock: { flex: 1, minWidth: 0, gap: spacing.xs },
-  close: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }, active: { opacity: 0.65 },
+  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, active: { opacity: 0.65 },
   content: { gap: spacing.lg }, progress: { minHeight: 130, flexDirection: 'row', alignItems: 'center' }, progressCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
   actions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md },
-  primaryAction: { minHeight: 42, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.brand },
+  primaryAction: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.brand },
   primaryActive: { backgroundColor: colors.brandStrong }, primaryText: { color: colors.white },
-  secondaryAction: { minHeight: 42, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.md },
-  fileSummary: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, backgroundColor: colors.surfaceMuted },
+  secondaryAction: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.md },
+  selectorIntro: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSubtle },
+  fileSummary: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl, paddingHorizontal: spacing.lg, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceSubtle },
   fileMark: { width: 42, height: 46, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.xs, backgroundColor: colors.surface },
   fileCopy: { flex: 1, minWidth: 0, gap: spacing.xs }, filename: { flexShrink: 1 },
   error: { gap: spacing.xs, padding: spacing.md, borderLeftWidth: 2, borderLeftColor: colors.statusHigh, backgroundColor: colors.statusHighMuted },
-  successMark: { width: 24, height: 2, backgroundColor: colors.brand },
+  successMark: { width: 48, height: 3, backgroundColor: colors.brand },
   ocrNotice: { gap: spacing.xs, padding: spacing.md, borderLeftWidth: 2, borderLeftColor: colors.statusLow, backgroundColor: colors.statusLowMuted },
 });

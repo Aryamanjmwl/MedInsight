@@ -22,10 +22,12 @@ export function validateReportFile({ name, mimeType, size }: ReportFileMetadata)
 
 export function uploadErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
+    if (error.status === 401) return 'Your session has expired. Please sign in again.';
     if (error.status === 413) return 'File is larger than the allowed upload limit.';
     if (error.status === 415) return 'Unsupported file type. Please choose a PDF.';
     if (error.status === 422) return 'The PDF could not be processed.';
     if (error.status === 503) return 'OCR is required for this report but is not available on the server.';
+    if (error.status === null) return 'Unable to reach MedInsight. Check your connection and try again.';
   }
   return 'Unable to process this report right now.';
 }

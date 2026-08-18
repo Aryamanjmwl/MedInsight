@@ -4,17 +4,19 @@ import { colors } from '@/theme';
 export function getStatusColor(status: BiomarkerStatus) {
   if (status === 'high') return colors.statusHigh;
   if (status === 'low') return colors.statusLow;
-  return colors.textSecondary;
+  if (status === 'normal') return colors.statusNormal;
+  return colors.textMuted;
 }
 
 export function getStatusLabel(status: BiomarkerStatus) {
-  return status === 'normal' ? '—' : status.toUpperCase();
+  if (status === 'high') return 'Above report range';
+  if (status === 'low') return 'Below report range';
+  if (status === 'normal') return 'In range';
+  return 'Not classified';
 }
 
 export function getBiomarkerStatusLabel(status: BiomarkerStatus) {
-  if (status === 'normal') return 'IN RANGE';
-  if (status === 'unknown') return 'REFERENCE UNKNOWN';
-  return status.toUpperCase();
+  return getStatusLabel(status).toUpperCase();
 }
 
 export function getTrendSymbol(trend?: TrendDirection | 'up' | 'down') {

@@ -62,7 +62,7 @@ export function DashboardEmptyState({ onUpload, onRefresh, refreshing, refreshFa
           <Pressable accessibilityRole="button" onPress={onUpload} style={({ hovered, pressed }) => [styles.outlineAction, (hovered || pressed) && styles.actionActive]}>
             <AppText variant="label" color="textSecondary">Upload report</AppText>
           </Pressable>
-          <Pressable accessibilityRole="button" disabled={refreshing} onPress={onRefresh} style={({ hovered, pressed }) => [styles.action, (hovered || pressed) && styles.actionActive]}>
+        <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={onRefresh} style={({ hovered, pressed }) => [styles.action, (hovered || pressed) && styles.actionActive]}>
             {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}
           </Pressable>
         </View>
@@ -99,15 +99,15 @@ const styles = StyleSheet.create({
   desktopStateHeader: { marginHorizontal: -40, paddingHorizontal: 40 },
   stateHeading: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.lg },
   loadingGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xl },
-  panel: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface },
+  panel: { borderTopWidth: 2, borderTopColor: colors.textPrimary, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface },
   loadingPrimary: { minWidth: 280, flex: 1.7, minHeight: 250, justifyContent: 'center', gap: spacing.xl, padding: spacing.xl },
   loadingSecondary: { minWidth: 240, flex: 1, minHeight: 250, justifyContent: 'center', gap: spacing.xl, padding: spacing.xl },
   loadingTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   loadingLine: { height: 1, backgroundColor: colors.border }, longLine: { width: '88%' }, mediumLine: { width: '64%' }, shortLine: { width: '42%' },
-  messagePanel: { minHeight: 260, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, padding: spacing.xxl },
-  messageCopy: { maxWidth: 540 }, action: { minHeight: 38, justifyContent: 'center', marginTop: spacing.sm },
+  messagePanel: { minHeight: 190, alignItems: 'flex-start', justifyContent: 'center', gap: spacing.md, paddingVertical: spacing.xxl, paddingHorizontal: spacing.xl },
+  messageCopy: { maxWidth: 540 }, action: { minHeight: 44, justifyContent: 'center', marginTop: spacing.sm },
   emptyActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.lg },
-  outlineAction: { minHeight: 42, justifyContent: 'center', paddingHorizontal: spacing.lg, marginTop: spacing.sm, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.sm },
+  outlineAction: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg, marginTop: spacing.sm, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.sm },
   actionActive: { opacity: 0.65 },
   refreshError: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing.md, padding: spacing.md, borderLeftWidth: 2, borderLeftColor: colors.statusLow, backgroundColor: colors.statusLowMuted },
   refreshCopy: { flex: 1, minWidth: 220 },

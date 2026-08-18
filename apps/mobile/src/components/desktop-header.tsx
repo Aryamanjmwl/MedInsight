@@ -1,7 +1,9 @@
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import { AppText } from '@/components/app-text';
+import { useAuth } from '@/context/auth-context';
 import { useReportUploadDialog } from '@/context/report-upload-context';
 import { colors, layout, radii, spacing, typography } from '@/theme';
 
@@ -16,6 +18,8 @@ export function DesktopHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { openReportUpload } = useReportUploadDialog();
+  const { user } = useAuth();
+  const accountInitial = user?.email?.trim().charAt(0).toUpperCase() || '?';
 
   return (
     <View style={styles.shell}>
@@ -39,7 +43,8 @@ export function DesktopHeader() {
                   ]}>
                   <AppText
                     variant="label"
-                    color={active ? 'textPrimary' : item.href ? 'textMuted' : 'textFaint'}>
+                    color={active ? 'textPrimary' : item.href ? 'textSecondary' : 'textFaint'}
+                    style={styles.navLabel}>
                     {item.label}
                   </AppText>
                 </Pressable>
@@ -49,14 +54,16 @@ export function DesktopHeader() {
         </View>
 
         <View style={styles.actions}>
-          <Pressable accessibilityLabel="Search" style={({ hovered }) => [styles.outlineAction, hovered && styles.actionHovered]}>
-            <AppText variant="caption" color="textMuted">⌕  Search</AppText>
-          </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Upload report" onPress={openReportUpload} style={({ hovered, pressed }) => [styles.outlineAction, (hovered || pressed) && styles.actionHovered]}>
-            <AppText variant="caption" color="textSecondary">Upload report</AppText>
+            <Feather color={colors.white} name="upload" size={15} />
+            <AppText variant="label" color="white">Upload report</AppText>
           </Pressable>
-          <Pressable accessibilityLabel="Open profile" style={styles.avatar}>
-            <AppText variant="caption" style={styles.avatarText}>A</AppText>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Open account settings"
+            onPress={() => router.push('/settings')}
+            style={({ hovered, pressed }) => [styles.avatar, (hovered || pressed) && styles.actionHovered]}>
+            <AppText variant="caption" style={styles.avatarText}>{accountInitial}</AppText>
           </Pressable>
         </View>
       </View>
@@ -65,17 +72,18 @@ export function DesktopHeader() {
 }
 
 const styles = StyleSheet.create({
-  shell: { width: '100%', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background },
-  header: { width: '100%', maxWidth: layout.contentMaxWidth, height: 58, paddingHorizontal: layout.desktopGutter, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  shell: { width: '100%', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.borderStrong, backgroundColor: colors.background },
+  header: { width: '100%', maxWidth: layout.contentMaxWidth, height: 64, paddingHorizontal: layout.desktopGutter, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   leading: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxxl },
-  wordmark: { fontWeight: '600' },
+  wordmark: { fontSize: 19, fontWeight: '700', letterSpacing: -0.35 },
   navigation: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.xl, height: '100%' },
   navItem: { justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent', paddingTop: 2 },
+  navLabel: { fontSize: 13, fontWeight: '600' },
   navItemActive: { borderBottomColor: colors.textPrimary },
   navItemHovered: { opacity: 0.72 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  outlineAction: { minHeight: 34, justifyContent: 'center', paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xs },
-  actionHovered: { borderColor: colors.textMuted },
-  avatar: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill, backgroundColor: colors.textPrimary },
-  avatarText: { color: colors.surface, fontWeight: typography.bodyStrong.fontWeight },
+  outlineAction: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.brand },
+  actionHovered: { opacity: 0.76 },
+  avatar: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.pill, backgroundColor: colors.surface },
+  avatarText: { color: colors.textPrimary, fontWeight: typography.bodyStrong.fontWeight },
 });

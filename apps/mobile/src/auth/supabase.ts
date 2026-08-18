@@ -5,7 +5,9 @@ import { Platform } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+const legacySupabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const supabasePublicKey = supabasePublishableKey || legacySupabaseAnonKey;
 
 type StorageAdapter = {
   getItem: (key: string) => Promise<string | null>;
@@ -31,19 +33,19 @@ const webStorage: StorageAdapter = {
   },
 };
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublicKey);
 
 let client: SupabaseClient | null = null;
 
 export function getSupabaseClient(): SupabaseClient {
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabasePublicKey) {
     throw new Error(
-      'EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY are required.',
+      'EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY are required. EXPO_PUBLIC_SUPABASE_ANON_KEY is accepted for legacy projects.',
     );
   }
 
   if (!client) {
-    client = createClient(supabaseUrl, supabaseAnonKey, {
+    client = createClient(supabaseUrl, supabasePublicKey, {
       auth: {
         storage: Platform.OS === 'web' ? webStorage : nativeSecureStorage,
         autoRefreshToken: true,

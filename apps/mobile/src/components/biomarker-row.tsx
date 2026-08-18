@@ -37,7 +37,7 @@ export function BiomarkerRow({ biomarker, selected, onPress }: BiomarkerRowProps
       </View>
       <View style={styles.detailCueRow}>
         <AppText variant="caption" color="textSecondary" style={styles.measurements}>{biomarker.measurement_count} recorded {biomarker.measurement_count === 1 ? 'measurement' : 'measurements'}</AppText>
-        <AppText variant="label" color="brand">{selected ? 'Close ↑' : 'History →'}</AppText>
+        <AppText variant="label" color="brand">{selected ? 'Close details' : 'View details →'}</AppText>
       </View>
     </Pressable>
   );
@@ -45,7 +45,7 @@ export function BiomarkerRow({ biomarker, selected, onPress }: BiomarkerRowProps
 
 const styles = StyleSheet.create({
   row: { gap: spacing.sm, paddingVertical: spacing.lg, paddingHorizontal: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
-  selectedRow: { backgroundColor: colors.surfaceSubtle }, rowActive: { backgroundColor: colors.surfaceMuted },
+  selectedRow: { borderLeftWidth: 3, borderLeftColor: colors.brand, backgroundColor: colors.surfaceSubtle }, rowActive: { backgroundColor: colors.surfaceMuted },
   primaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
   secondaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md },
   compactRow: { alignItems: 'flex-start', flexDirection: 'column', gap: spacing.xs },

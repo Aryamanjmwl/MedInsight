@@ -1,14 +1,16 @@
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { DashboardBiomarkerSummary } from '@/api';
 import { AppText } from '@/components/app-text';
 import { getStatusColor, getStatusLabel } from '@/components/status-utils';
-import { colors, radii, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { formatValue } from '@/utils/formatting';
 
 type NeedsAttentionProps = { biomarkers: DashboardBiomarkerSummary[]; totalCount: number };
 
 export function NeedsAttention({ biomarkers, totalCount }: NeedsAttentionProps) {
+  const router = useRouter();
   return (
     <View style={styles.panel}>
       <View style={styles.header}>
@@ -31,16 +33,18 @@ export function NeedsAttention({ biomarkers, totalCount }: NeedsAttentionProps) 
       }) : (
         <AppText variant="caption" color="textMuted" style={styles.empty}>No latest results outside their stored laboratory reference ranges.</AppText>
       )}
-      <Pressable accessibilityRole="button" style={styles.action}><AppText variant="label" color="brand">Review biomarkers →</AppText></Pressable>
+      <Pressable accessibilityRole="link" onPress={() => router.push('/biomarkers')} style={styles.action}>
+        <AppText variant="label" color="brand">{totalCount ? 'Review biomarkers →' : 'View all biomarkers →'}</AppText>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: { width: '100%', minWidth: 0, padding: spacing.xl, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface },
+  panel: { width: '100%', minWidth: 0, paddingVertical: spacing.xl, borderTopWidth: 2, borderTopColor: colors.textPrimary },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: spacing.md },
-  row: { minHeight: 92, flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  row: { minHeight: 92, flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
   marker: { width: 2, height: 42, marginTop: spacing.xs }, details: { flex: 1, gap: spacing.xxs }, numeric: { fontVariant: ['tabular-nums'] },
-  empty: { paddingVertical: spacing.xl, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
-  action: { paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  empty: { paddingVertical: spacing.lg },
+  action: { minHeight: 44, justifyContent: 'center', paddingTop: spacing.sm },
 });

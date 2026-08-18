@@ -53,11 +53,7 @@ export function BiomarkerExplorer({ trends, biomarkers }: BiomarkerExplorerProps
       <View style={styles.topSection}>
         <View style={styles.sectionHeading}>
           <AppText variant="metadata" color="textMuted">What Changed</AppText>
-          <View style={styles.rangeSelector} accessibilityLabel="Trend covers all recorded measurements">
-            <AppText variant="metadata" color="textFaint" style={styles.disabledRange}>6M</AppText>
-            <AppText variant="metadata" color="textFaint" style={styles.disabledRange}>1Y</AppText>
-            <View style={styles.activeRange}><AppText variant="metadata" style={styles.activeRangeText}>ALL</AppText></View>
-          </View>
+          <AppText variant="caption" color="textMuted">All recorded data</AppText>
         </View>
         <ScrollView horizontal style={styles.selectorScroll} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.selectorContent}>
           {usableTrends.map((trend) => {
@@ -116,14 +112,13 @@ function Stat({ label, value, detail }: { label: string; value: string; detail?:
 }
 
 const styles = StyleSheet.create({
-  panel: { width: '100%', minWidth: 0, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, backgroundColor: colors.surface, overflow: 'hidden' },
+  panel: { width: '100%', minWidth: 0, borderTopWidth: 2, borderTopColor: colors.textPrimary, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface, overflow: 'hidden' },
   topSection: { paddingTop: spacing.xl, paddingHorizontal: spacing.xl, gap: spacing.md }, sectionHeading: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   selectorScroll: { width: '100%', minWidth: 0 }, selectorContent: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingRight: spacing.lg },
-  selector: { minHeight: 42, justifyContent: 'center', paddingHorizontal: spacing.md, borderBottomWidth: 2, borderBottomColor: 'transparent' }, selectorActive: { borderBottomColor: colors.textPrimary }, selectorHovered: { opacity: 0.72 },
+  selector: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderBottomWidth: 2, borderBottomColor: 'transparent' }, selectorActive: { borderBottomColor: colors.textPrimary }, selectorHovered: { opacity: 0.72 },
   content: { padding: spacing.xl }, measurementHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.xl }, compactMeasurementHeader: { flexDirection: 'column', gap: spacing.md },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm }, value: { fontVariant: ['tabular-nums'] }, change: { alignItems: 'flex-end' }, compactChange: { alignItems: 'flex-start' }, numeric: { fontVariant: ['tabular-nums'] },
   footer: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.xl, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle }, compactFooter: { flexDirection: 'column' }, stats: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xl }, stat: { gap: spacing.xxs }, direction: { alignItems: 'flex-end', gap: spacing.xxs },
   annotation: { marginTop: spacing.lg, padding: spacing.lg, gap: spacing.xs, borderLeftWidth: 2, borderLeftColor: colors.brand, borderRadius: radii.sm, backgroundColor: colors.brandMuted },
-  rangeSelector: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs }, disabledRange: { minWidth: 34, textAlign: 'center' }, activeRange: { minWidth: 38, minHeight: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radii.xs, backgroundColor: colors.textPrimary }, activeRangeText: { color: colors.surface },
-  emptyState: { minHeight: 220, justifyContent: 'center', gap: spacing.sm, padding: spacing.xl },
+  emptyState: { minHeight: 132, justifyContent: 'center', gap: spacing.sm, padding: spacing.xl },
 });

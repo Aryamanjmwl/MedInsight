@@ -28,24 +28,25 @@ export function ReportRow({ report, selected, onPress }: ReportRowProps) {
       ]}>
       <AppText variant="metadata" color="textSecondary" style={styles.date}>{formatDayMonth(report.uploaded_at)}</AppText>
       <View style={styles.details}>
-        <AppText variant="bodyStrong" selectable>{report.filename}</AppText>
+        <AppText variant="bodyStrong">Laboratory report</AppText>
+        <AppText variant="caption" color="textSecondary" selectable>{report.filename}</AppText>
         <View style={styles.metadata}>
-          <AppText variant="caption" color="textMuted">{report.biomarker_count} biomarkers</AppText>
+          <AppText variant="caption" color="textMuted">{report.biomarker_count} measurements</AppText>
           <AppText variant="caption" color="textMuted">{report.page_count} {report.page_count === 1 ? 'page' : 'pages'}</AppText>
           <AppText variant="caption" color="textMuted">Uploaded {formatFullDate(report.uploaded_at)}</AppText>
-          {report.requires_ocr ? <AppText variant="caption" color="statusLow">Text review needed</AppText> : null}
+          <AppText variant="caption" color="textMuted">{report.requires_ocr ? 'OCR source' : 'Machine-readable PDF'}</AppText>
         </View>
       </View>
-      <AppText variant="label" color="brand" style={styles.openCue}>{selected ? 'Close ↑' : 'Open →'}</AppText>
+      <AppText variant="label" color="brand" style={styles.openCue}>{selected ? 'Close details' : 'View details →'}</AppText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: spacing.xl, paddingVertical: spacing.lg, paddingHorizontal: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
+  row: { minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: spacing.xl, paddingVertical: spacing.lg, paddingHorizontal: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   compactRow: { alignItems: 'flex-start', flexWrap: 'wrap', gap: spacing.md },
-  selectedRow: { backgroundColor: colors.surfaceSubtle }, activeRow: { backgroundColor: colors.surfaceMuted },
-  date: { width: 62, fontVariant: ['tabular-nums'] }, details: { flex: 1, minWidth: 180, gap: spacing.xs },
+  selectedRow: { borderLeftWidth: 3, borderLeftColor: colors.brand, backgroundColor: colors.surfaceSubtle }, activeRow: { backgroundColor: colors.surfaceMuted },
+  date: { width: 68, fontSize: 11, lineHeight: 17, fontVariant: ['tabular-nums'] }, details: { flex: 1, minWidth: 180, gap: spacing.xs },
   metadata: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.lg, rowGap: spacing.xs },
   openCue: { minWidth: 54, textAlign: 'right' },
 });
