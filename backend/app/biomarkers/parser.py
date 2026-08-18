@@ -170,12 +170,29 @@ def _parse_candidate(
 def _candidate_blocks(
     lines: list[SourceLine], start: int, resolved: ResolvedName
 ) -> list[tuple[str, str, tuple[int, ...]]]:
-    continuations: list[SourceLine] = []
-    for line in lines[start + 1 : start + 3]:
+    available_continuations: list[SourceLine] = []
+    for line in lines[start + 1 : start + 4]:
         if resolve_biomarker_name(line.normalized) is not None:
             break
-        continuations.append(line)
+        available_continuations.append(line)
     blocks: list[tuple[str, str, tuple[int, ...]]] = []
+
+    # Some PDFs expose a visual table as one text line per cell. Associate the
+    # fourth cell only when the complete name/value/unit/reference structure is
+    # explicit and contiguous; mixed-content or partial cells remain unknown.
+    if (
+        not resolved.remainder
+        and len(available_continuations) == 3
+        and VALUE_RE.fullmatch(available_continuations[0].normalized) is not None
+        and normalize_unit(available_continuations[1].normalized) is not None
+        and REFERENCE_RE.fullmatch(available_continuations[2].normalized) is not None
+    ):
+        payload = " ".join(line.normalized for line in available_continuations)
+        source_lines = [lines[start].raw, *(line.raw for line in available_continuations)]
+        indices = (lines[start].index, *(line.index for line in available_continuations))
+        blocks.append((payload, "\n".join(source_lines), indices))
+
+    continuations = available_continuations[:2]
     for continuation_count in range(len(continuations), -1, -1):
         selected = continuations[:continuation_count]
         payload_parts = [resolved.remainder, *(line.normalized for line in selected)]

@@ -34,6 +34,15 @@ class EvaluationMetrics:
 
 
 E = ExpectedBiomarker
+SPLIT_CELL_PDF_TEXT = (
+    "Synthetic Laboratory Report - User A\n"
+    "Fictitious data for MedInsight authentication/isolation testing only.\n"
+    "Test\nResult\nUnit\nReference\n"
+    "Hemoglobin\n13.5\ng/dL\n12.0 - 15.5\n"
+    "Glucose\n92\nmg/dL\n70 - 99\n"
+    "Creatinine\n0.84\nmg/dL\n0.6 - 1.1\n"
+    "This document contains no real patient or medical data."
+)
 FORMAT_CASES = (
     FormatCase(
         "standard one-line",
@@ -121,6 +130,15 @@ FORMAT_CASES = (
         "Platelets 250 ×10^9 / L 150–400",
         (E("creatinine", 84, "µmol/L", 60, 110), E("platelets", 250, "x10^9/L", 150, 400)),
     ),
+    FormatCase(
+        "PDF table cells extracted as separate lines",
+        SPLIT_CELL_PDF_TEXT,
+        (
+            E("hemoglobin", 13.5, "g/dL", 12, 15.5),
+            E("glucose", 92, "mg/dL", 70, 99),
+            E("creatinine", 0.84, "mg/dL", 0.6, 1.1),
+        ),
+    ),
 )
 
 
@@ -161,8 +179,8 @@ class BiomarkerFormatEvaluationTests(unittest.TestCase):
 
     def test_synthetic_format_evaluation_has_zero_extraction_errors(self) -> None:
         metrics = evaluate_format_cases()
-        self.assertEqual(len(FORMAT_CASES), 15)
-        self.assertEqual(metrics.expected_matches, 25)
+        self.assertEqual(len(FORMAT_CASES), 16)
+        self.assertEqual(metrics.expected_matches, 28)
         self.assertEqual(metrics.missed_matches, 0)
         self.assertEqual(metrics.false_positives, 0)
         self.assertEqual(metrics.incorrect_values, 0)
@@ -197,6 +215,38 @@ class BiomarkerFormatEvaluationTests(unittest.TestCase):
         self.assertEqual(without_reference.biomarkers[0].status, "unknown")
         self.assertEqual(without_reference.biomarkers[0].raw_reference, "")
         self.assertEqual(without_unit.biomarkers, [])
+
+    def test_split_pdf_table_cells_are_classified_from_explicit_references(self) -> None:
+        result = parse_biomarkers(SPLIT_CELL_PDF_TEXT)
+
+        self.assertEqual(
+            [
+                (
+                    item.normalized_name,
+                    item.value,
+                    item.unit,
+                    item.reference_low,
+                    item.reference_high,
+                    item.status,
+                )
+                for item in result.biomarkers
+            ],
+            [
+                ("hemoglobin", 13.5, "g/dL", 12.0, 15.5, "normal"),
+                ("glucose", 92.0, "mg/dL", 70.0, 99.0, "normal"),
+                ("creatinine", 0.84, "mg/dL", 0.6, 1.1, "normal"),
+            ],
+        )
+
+    def test_split_cell_reference_with_extra_text_is_not_associated(self) -> None:
+        result = parse_biomarkers(
+            "Hemoglobin\n13.5\ng/dL\nSuggested range 12.0 - 15.5 for context"
+        )
+
+        self.assertEqual(result.count, 1)
+        self.assertIsNone(result.biomarkers[0].reference_low)
+        self.assertIsNone(result.biomarkers[0].reference_high)
+        self.assertEqual(result.biomarkers[0].status, "unknown")
 
 
 if __name__ == "__main__":
