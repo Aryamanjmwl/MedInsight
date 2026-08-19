@@ -10,7 +10,7 @@ STABLE_RELATIVE_TOLERANCE = 1e-6
 
 
 class TrendMeasurement(Protocol):
-    report_id: int
+    report_id: int | None
     uploaded_at: datetime
     value: float
     unit: str
@@ -24,7 +24,7 @@ def calculate_trend(
         enumerate(measurements),
         key=lambda item: (
             item[1].uploaded_at,
-            item[1].report_id,
+            item[1].report_id if item[1].report_id is not None else -1,
             item[0],
         ),
     )

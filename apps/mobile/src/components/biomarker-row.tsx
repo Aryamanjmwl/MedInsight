@@ -16,7 +16,7 @@ type BiomarkerRowProps = {
 export function BiomarkerRow({ biomarker, selected, onPress }: BiomarkerRowProps) {
   const { isCompact } = useResponsiveLayout();
   const statusColor = getStatusColor(biomarker.latest_status);
-  const statusLabel = getBiomarkerStatusLabel(biomarker.latest_status);
+  const statusLabel = getBiomarkerStatusLabel(biomarker.latest_status, biomarker.latest_source);
 
   return (
     <Pressable
@@ -32,7 +32,7 @@ export function BiomarkerRow({ biomarker, selected, onPress }: BiomarkerRowProps
         </AppText>
       </View>
       <View style={[styles.secondaryRow, isCompact && styles.compactRow]}>
-        <AppText variant="caption" color="textMuted" style={styles.updated}>Updated {formatFullDate(biomarker.latest_report_date)}</AppText>
+        <AppText variant="caption" color="textMuted" style={styles.updated}>{biomarker.latest_source === 'manual' ? 'Manual entry' : 'Laboratory report'} · {formatFullDate(biomarker.latest_report_date)}</AppText>
         <AppText variant="metadata" style={{ color: statusColor }}>{statusLabel}</AppText>
       </View>
       <View style={styles.detailCueRow}>

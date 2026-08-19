@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from ..biomarkers import BiomarkerStatus, ReferenceOperator
+from ..biomarkers import BiomarkerStatus, MeasurementSource, ReferenceOperator
 from ..trends import TrendDirection
 
 
@@ -15,7 +15,7 @@ class BriefRecentReport(BaseModel):
 
 
 class BriefMeasurement(BaseModel):
-    report_id: int
+    report_id: int | None
     normalized_name: str
     display_name: str
     value: float
@@ -26,6 +26,7 @@ class BriefMeasurement(BaseModel):
     reference_operator: ReferenceOperator | None
     raw_reference: str
     measurement_date: datetime
+    source: MeasurementSource = MeasurementSource.REPORT
 
 
 class BriefUnclassifiedMeasurement(BriefMeasurement):

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from ..biomarkers import BiomarkerStatus
+from ..biomarkers import BiomarkerStatus, MeasurementSource
 from ..biomarkers.vocabulary import BIOMARKERS_BY_NORMALIZED_NAME
 from ..db import (
     get_biomarker_history,
@@ -25,12 +25,9 @@ NEEDS_ATTENTION_LIMIT = 10
 TREND_LIMIT = 10
 UNCLASSIFIED_LIMIT = 10
 QUESTION_LIMIT = 5
-UNCLASSIFIED_REASON = (
-    "A usable report-provided reference range was not available for classification."
-)
 BRIEF_LIMITATIONS = [
-    "This brief contains only structured results from saved laboratory reports.",
-    "Outside-range labels use the reference information printed in each report.",
+    "This brief contains only structured laboratory measurements from saved reports and manual entries.",
+    "Outside-range labels use only reference information printed in a report or entered with a manual result.",
     "Trend direction is mathematical and does not indicate whether a change is medically good or bad.",
     "This brief does not provide diagnosis, severity scoring, or treatment recommendations.",
 ]
@@ -83,14 +80,20 @@ def _build_questions(
     candidates: list[str] = []
     for item in needs_attention:
         reference = _format_reference(item)
-        range_context = (
-            f" of {reference}" if reference else " supplied by this report"
-        )
-        candidates.append(
-            f"My {item.display_name} was {_format_number(item.value)} {item.unit}, "
-            f"outside this report's reference range{range_context}. Could you help "
-            "me understand what might be relevant in my case?"
-        )
+        if item.source == MeasurementSource.MANUAL:
+            range_context = f" of {reference}" if reference else " entered with this result"
+            candidates.append(
+                f"My {item.display_name} was {_format_number(item.value)} {item.unit}, "
+                f"outside the reference range{range_context}. Could you help me "
+                "understand what might be relevant in my case?"
+            )
+        else:
+            range_context = f" of {reference}" if reference else " supplied by this report"
+            candidates.append(
+                f"My {item.display_name} was {_format_number(item.value)} {item.unit}, "
+                f"outside this report's reference range{range_context}. Could you help "
+                "me understand what might be relevant in my case?"
+            )
     for item in trends:
         candidates.append(
             f"My {item.display_name} changed from {_format_number(item.first_value)} "
@@ -99,10 +102,16 @@ def _build_questions(
             "Is this change meaningful in the context of my health history?"
         )
     for item in unclassified:
-        candidates.append(
-            "This report did not provide a usable reference range for "
-            f"{item.display_name}. How should this result be interpreted?"
-        )
+        if item.source == MeasurementSource.MANUAL:
+            candidates.append(
+                f"I did not enter a reference range for {item.display_name}. "
+                "How should this result be interpreted?"
+            )
+        else:
+            candidates.append(
+                "This report did not provide a usable reference range for "
+                f"{item.display_name}. How should this result be interpreted?"
+            )
 
     questions: list[str] = []
     seen: set[str] = set()
@@ -145,6 +154,7 @@ def build_doctor_visit_brief(
         latest_measurements.append(
             BriefMeasurement(
                 report_id=latest.report_id,
+                source=latest.source,
                 normalized_name=overview.normalized_name,
                 display_name=definition.display_name,
                 value=latest.value,
@@ -194,7 +204,14 @@ def build_doctor_visit_brief(
         key=_measurement_sort_key,
     )[:NEEDS_ATTENTION_LIMIT]
     unclassified = [
-        BriefUnclassifiedMeasurement(**item.model_dump(), reason=UNCLASSIFIED_REASON)
+        BriefUnclassifiedMeasurement(
+            **item.model_dump(),
+            reason=(
+                "No reference range was entered for this manual measurement."
+                if item.source == MeasurementSource.MANUAL
+                else "A usable report-provided reference range was not available for classification."
+            ),
+        )
         for item in sorted(
             (item for item in latest_measurements if item.status == BiomarkerStatus.UNKNOWN),
             key=_measurement_sort_key,

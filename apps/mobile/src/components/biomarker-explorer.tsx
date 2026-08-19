@@ -28,7 +28,7 @@ export function BiomarkerExplorer({ trends, biomarkers }: BiomarkerExplorerProps
         <View style={styles.emptyState}>
           <AppText variant="metadata" color="textMuted">What Changed</AppText>
           <AppText variant="section">{mixedUnits ? 'Trend unavailable because recorded units differ.' : 'More measurements are needed before a trend can be shown.'}</AppText>
-          <AppText variant="caption" color="textMuted">Trends use comparable measurements saved across laboratory reports.</AppText>
+          <AppText variant="caption" color="textMuted">Trends use comparable measurements in your longitudinal laboratory record.</AppText>
         </View>
       </View>
     );
@@ -76,7 +76,7 @@ export function BiomarkerExplorer({ trends, biomarkers }: BiomarkerExplorerProps
               <AppText variant="value" style={[styles.value, { color: statusColor }]}>{formatValue(latestValue)}</AppText>
               <AppText color="textMuted">{unit}</AppText>
             </View>
-            {biomarker && biomarker.latest_status !== 'normal' ? <AppText variant="metadata" style={{ color: statusColor }}>{getStatusLabel(biomarker.latest_status)}</AppText> : null}
+            {biomarker && biomarker.latest_status !== 'normal' ? <AppText variant="metadata" style={{ color: statusColor }}>{getStatusLabel(biomarker.latest_status, biomarker.latest_source)}</AppText> : null}
           </View>
           <View style={[styles.change, isCompact && styles.compactChange]}>
             <AppText variant="section" color="textSecondary">{getTrendArrow(selected.direction)} {selected.percent_change === null ? '—' : formatSignedValue(selected.percent_change, '%')}</AppText>
@@ -100,7 +100,7 @@ export function BiomarkerExplorer({ trends, biomarkers }: BiomarkerExplorerProps
 
         <View style={styles.annotation}>
           <AppText variant="label" color="textSecondary">{displayName} is {directionLabel} across {selected.measurement_count} recorded measurements.</AppText>
-          <AppText variant="caption" color="textFaint">Based on saved laboratory reports · {formatMonthYear(firstDate)}–{formatMonthYear(latestDate)}</AppText>
+          <AppText variant="caption" color="textFaint">Based on recorded laboratory measurements · {formatMonthYear(firstDate)}–{formatMonthYear(latestDate)}</AppText>
         </View>
       </View>
     </View>

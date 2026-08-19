@@ -5,12 +5,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ...auth import AuthenticatedUser, get_current_user
-from ...biomarkers import BiomarkerStatus
+from ...biomarkers import BiomarkerStatus, MeasurementSource
 from ...db import (
     get_biomarker_history,
     get_db_session,
     get_report_statistics,
     list_biomarker_overviews,
+    list_recent_manual_measurements,
 )
 from ...doctor_brief import DoctorVisitBriefResponse, build_doctor_visit_brief
 from ...trends import TrendDirection, TrendResult, calculate_trend
@@ -25,7 +26,19 @@ class DashboardBiomarkerSummary(BaseModel):
     latest_unit: str
     latest_status: BiomarkerStatus
     latest_report_date: datetime
+    latest_source: MeasurementSource
     measurement_count: int
+
+
+class DashboardManualMeasurement(BaseModel):
+    measurement_id: int
+    normalized_name: str
+    test_name: str
+    measured_at: datetime
+    value: float
+    unit: str
+    status: BiomarkerStatus
+    source: MeasurementSource = MeasurementSource.MANUAL
 
 
 class DashboardSummaryResponse(BaseModel):
@@ -33,7 +46,9 @@ class DashboardSummaryResponse(BaseModel):
     total_distinct_biomarkers: int
     abnormal_biomarker_count: int
     latest_report_date: datetime | None
+    latest_health_record_date: datetime | None
     latest_biomarkers: list[DashboardBiomarkerSummary]
+    recent_manual_measurements: list[DashboardManualMeasurement]
     trends: list[TrendResult]
 
 
@@ -51,6 +66,21 @@ def dashboard_summary(
         ),
         key=lambda item: (item.latest_report_date, item.normalized_name),
         reverse=True,
+    )
+    recent_manual_measurements = [
+        DashboardManualMeasurement.model_validate(item, from_attributes=True)
+        for item in list_recent_manual_measurements(session, current_user.id)
+    ]
+    latest_health_record_date = max(
+        (
+            item
+            for item in (
+                report_statistics.latest_report_date,
+                *(biomarker.latest_report_date for biomarker in latest_biomarkers),
+            )
+            if item is not None
+        ),
+        default=None,
     )
 
     trends: list[TrendResult] = []
@@ -75,7 +105,9 @@ def dashboard_summary(
             for item in latest_biomarkers
         ),
         latest_report_date=report_statistics.latest_report_date,
+        latest_health_record_date=latest_health_record_date,
         latest_biomarkers=latest_biomarkers,
+        recent_manual_measurements=recent_manual_measurements,
         trends=trends,
     )
 

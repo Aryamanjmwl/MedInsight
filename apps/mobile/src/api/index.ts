@@ -1,5 +1,5 @@
 export { ApiError } from '@/api/client';
-export { explainBiomarker, getBiomarkerHistory, getBiomarkers, getBiomarkerTrend } from '@/api/biomarkers';
+export { createManualMeasurement, deleteManualMeasurement, explainBiomarker, getBiomarkerHistory, getBiomarkers, getBiomarkerTrend, getSupportedBiomarkers } from '@/api/biomarkers';
 export { getDashboardSummary } from '@/api/dashboard';
 export { getDoctorVisitBrief } from '@/api/doctor-brief';
 export { getReport, getReports, processAndSaveReport } from '@/api/reports';
@@ -12,8 +12,10 @@ export type {
   BiomarkerOverview,
   BiomarkerResult,
   BiomarkerStatus,
+  MeasurementSource,
   DashboardBiomarkerSummary,
   DashboardSummaryResponse,
+  DashboardManualMeasurement,
   BriefMeasurement,
   BriefRecentReport,
   BriefTrend,
@@ -28,4 +30,8 @@ export type {
   TrendDirection,
   TrendIssue,
   TrendResult,
+  ManualMeasurementCreate,
+  ManualMeasurementDeleteResponse,
+  ManualMeasurementResponse,
+  SupportedBiomarker,
 } from '@/api/types';

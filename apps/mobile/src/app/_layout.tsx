@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { HealthDataRefreshProvider } from '@/context/health-data-refresh-context';
+import { ManualMeasurementProvider } from '@/context/manual-measurement-context';
 import { ReportUploadProvider } from '@/context/report-upload-context';
 import { colors } from '@/theme';
 
@@ -48,7 +49,9 @@ function AppNavigation() {
   if (!session) return stack;
   return (
     <HealthDataRefreshProvider key={session.user.id}>
-      <ReportUploadProvider>{stack}</ReportUploadProvider>
+      <ReportUploadProvider>
+        <ManualMeasurementProvider>{stack}</ManualMeasurementProvider>
+      </ReportUploadProvider>
     </HealthDataRefreshProvider>
   );
 }

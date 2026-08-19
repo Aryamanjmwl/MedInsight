@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..biomarkers import BiomarkerStatus, ReferenceOperator
+from ..biomarkers import BiomarkerStatus, MeasurementSource, ReferenceOperator
 from ..trends import TrendDirection
 
 
@@ -20,6 +20,7 @@ class BiomarkerExplanationContext(BaseModel):
     reference_high: float | None
     reference_operator: ReferenceOperator | None
     status: BiomarkerStatus
+    measurement_source: MeasurementSource
     measurement_date: datetime
     trend_comparison_available: bool
     trend_direction: TrendDirection | None

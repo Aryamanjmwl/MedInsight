@@ -1,4 +1,4 @@
-import type { BiomarkerStatus, TrendDirection } from '@/api';
+import type { BiomarkerStatus, MeasurementSource, TrendDirection } from '@/api';
 import { colors } from '@/theme';
 
 export function getStatusColor(status: BiomarkerStatus) {
@@ -8,15 +8,15 @@ export function getStatusColor(status: BiomarkerStatus) {
   return colors.textMuted;
 }
 
-export function getStatusLabel(status: BiomarkerStatus) {
-  if (status === 'high') return 'Above report range';
-  if (status === 'low') return 'Below report range';
+export function getStatusLabel(status: BiomarkerStatus, source: MeasurementSource = 'report') {
+  if (status === 'high') return source === 'manual' ? 'Above entered range' : 'Above report range';
+  if (status === 'low') return source === 'manual' ? 'Below entered range' : 'Below report range';
   if (status === 'normal') return 'In range';
   return 'Not classified';
 }
 
-export function getBiomarkerStatusLabel(status: BiomarkerStatus) {
-  return getStatusLabel(status).toUpperCase();
+export function getBiomarkerStatusLabel(status: BiomarkerStatus, source: MeasurementSource = 'report') {
+  return getStatusLabel(status, source).toUpperCase();
 }
 
 export function getTrendSymbol(trend?: TrendDirection | 'up' | 'down') {

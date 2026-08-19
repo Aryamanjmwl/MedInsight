@@ -23,7 +23,7 @@ export function LatestMeasurements({ biomarkers, trends }: LatestMeasurementsPro
             <Pressable
               key={item.normalized_name}
               accessibilityRole="button"
-              accessibilityLabel={`${item.test_name}, ${item.latest_value} ${item.latest_unit}, ${getStatusLabel(item.latest_status)}`}
+              accessibilityLabel={`${item.test_name}, ${item.latest_value} ${item.latest_unit}, ${getStatusLabel(item.latest_status, item.latest_source)}`}
               accessibilityHint="Opens biomarker history"
               onPress={() => router.push('/biomarkers')}
               style={({ pressed, hovered }) => [styles.row, (pressed || hovered) && styles.rowActive]}>
@@ -32,9 +32,9 @@ export function LatestMeasurements({ biomarkers, trends }: LatestMeasurementsPro
                 <AppText variant="bodyStrong" style={[styles.value, { color: item.latest_status === 'normal' ? colors.textPrimary : statusColor }]}>{formatValue(item.latest_value)} <AppText variant="caption" color="textMuted">{item.latest_unit}</AppText></AppText>
               </View>
               <View style={styles.secondaryRow}>
-                <AppText variant="caption" color="textMuted" style={styles.context}>{item.measurement_count} recorded · {formatMonthYear(item.latest_report_date)}</AppText>
+                <AppText variant="caption" color="textMuted" style={styles.context}>{item.latest_source === 'manual' ? 'Manual entry' : 'Laboratory report'} · {item.measurement_count} recorded · {formatMonthYear(item.latest_report_date)}</AppText>
                 <View style={styles.statusRow}>
-                  <AppText variant="metadata" style={{ color: statusColor }}>{getStatusLabel(item.latest_status)}</AppText>
+                  <AppText variant="metadata" style={{ color: statusColor }}>{getStatusLabel(item.latest_status, item.latest_source)}</AppText>
                   {trend ? <AppText variant="label" color="textSecondary">{getTrendSymbol(trend.direction)}</AppText> : null}
                 </View>
               </View>

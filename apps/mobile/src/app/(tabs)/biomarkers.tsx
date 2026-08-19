@@ -9,6 +9,7 @@ import { BiomarkersEmptyState, BiomarkersErrorState, BiomarkersLoadingState, Bio
 import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
+import { useManualMeasurementDialog } from '@/context/manual-measurement-context';
 import { useReportUploadDialog } from '@/context/report-upload-context';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { colors, spacing } from '@/theme';
@@ -30,6 +31,7 @@ export default function BiomarkersScreen() {
   const { isDesktop } = useResponsiveLayout();
   const { revision } = useHealthDataRefresh();
   const { openReportUpload } = useReportUploadDialog();
+  const { openManualMeasurement } = useManualMeasurementDialog();
   const [biomarkers, setBiomarkers] = useState<BiomarkerOverview[] | null>(null);
   const [overviewError, setOverviewError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,9 +187,12 @@ export default function BiomarkersScreen() {
             <AppText variant="metadata" color="textMuted">Latest Measurements</AppText>
             <AppText variant="caption" color="textMuted">{visibleBiomarkers.length} shown</AppText>
           </View>
-          <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={() => void loadBiomarkerOverview(true)} style={({ pressed, hovered }) => [styles.refresh, (pressed || hovered) && styles.active]}>
-            {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}
-          </Pressable>
+          <View style={styles.sectionActions}>
+            {!isDesktop ? <Pressable accessibilityRole="button" onPress={openManualMeasurement} style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}><AppText variant="label" color="brand">Add measurement</AppText></Pressable> : null}
+            <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={() => void loadBiomarkerOverview(true)} style={({ pressed, hovered }) => [styles.refresh, (pressed || hovered) && styles.active]}>
+              {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}
+            </Pressable>
+          </View>
         </View>
         <View accessibilityRole="tablist" style={styles.filters}>
           {filters.map((item) => {
@@ -246,6 +251,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.lg },
   sectionHeader: { minHeight: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md },
+  sectionActions: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   refresh: { minWidth: 58, minHeight: 44, alignItems: 'center', justifyContent: 'center' }, active: { opacity: 0.65 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: colors.border },
   filter: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderBottomWidth: 2, borderBottomColor: 'transparent' },

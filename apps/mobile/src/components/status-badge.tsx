@@ -1,17 +1,17 @@
 import { StyleSheet, View } from 'react-native';
 
-import type { BiomarkerStatus } from '@/api';
+import type { BiomarkerStatus, MeasurementSource } from '@/api';
 import { AppText } from '@/components/app-text';
 import { getStatusColor, getStatusLabel } from '@/components/status-utils';
 import { radii, spacing } from '@/theme';
 
-export function StatusBadge({ status }: { status: BiomarkerStatus }) {
+export function StatusBadge({ status, source = 'report' }: { status: BiomarkerStatus; source?: MeasurementSource }) {
   const textColor = getStatusColor(status);
   return (
     <View style={styles.badge}>
       {status !== 'normal' ? <View style={[styles.marker, { backgroundColor: textColor }]} /> : null}
       <AppText variant="metadata" style={{ color: textColor }}>
-        {getStatusLabel(status)}
+        {getStatusLabel(status, source)}
       </AppText>
     </View>
   );

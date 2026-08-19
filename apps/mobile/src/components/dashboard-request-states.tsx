@@ -45,22 +45,26 @@ export function DashboardErrorState({ onRetry }: { onRetry: () => void }) {
 
 type DashboardEmptyStateProps = {
   onUpload: () => void;
+  onAddMeasurement: () => void;
   onRefresh: () => void;
   refreshing: boolean;
   refreshFailed: boolean;
 };
 
-export function DashboardEmptyState({ onUpload, onRefresh, refreshing, refreshFailed }: DashboardEmptyStateProps) {
+export function DashboardEmptyState({ onUpload, onAddMeasurement, onRefresh, refreshing, refreshFailed }: DashboardEmptyStateProps) {
   return (
     <View style={styles.stateStack}>
       <StateHeader metadata="HEALTH RECORD" detail="No reports recorded" />
       <View style={[styles.panel, styles.messagePanel]}>
         <AppText variant="title">Your health record starts here</AppText>
-        <AppText color="textSecondary" style={styles.messageCopy}>Upload your first laboratory report to begin tracking biomarkers over time.</AppText>
+        <AppText color="textSecondary" style={styles.messageCopy}>Upload a laboratory report or add a structured laboratory measurement to begin your health record.</AppText>
         {refreshFailed ? <AppText variant="caption" color="textSecondary">The latest dashboard data could not be refreshed.</AppText> : null}
         <View style={styles.emptyActions}>
           <Pressable accessibilityRole="button" onPress={onUpload} style={({ hovered, pressed }) => [styles.outlineAction, (hovered || pressed) && styles.actionActive]}>
             <AppText variant="label" color="textSecondary">Upload report</AppText>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={onAddMeasurement} style={({ hovered, pressed }) => [styles.action, (hovered || pressed) && styles.actionActive]}>
+            <AppText variant="label" color="brand">Add measurement</AppText>
           </Pressable>
         <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: refreshing }} disabled={refreshing} onPress={onRefresh} style={({ hovered, pressed }) => [styles.action, (hovered || pressed) && styles.actionActive]}>
             {refreshing ? <ActivityIndicator size="small" color={colors.brand} /> : <AppText variant="label" color="brand">Refresh</AppText>}

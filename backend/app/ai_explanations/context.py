@@ -43,6 +43,7 @@ def build_biomarker_explanation_context(
         reference_high=latest.reference_high,
         reference_operator=latest.reference_operator,
         status=latest.status,
+        measurement_source=latest.source,
         measurement_date=latest.uploaded_at,
         trend_comparison_available=comparison_available,
         trend_direction=trend.direction if comparison_available else None,

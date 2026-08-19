@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
 
-import { ApiError, explainBiomarker, type BiomarkerExplanation, type BiomarkerHistoryResponse, type BiomarkerOverview, type TrendResult } from '@/api';
+import { ApiError, deleteManualMeasurement, explainBiomarker, type BiomarkerExplanation, type BiomarkerHistoryItem, type BiomarkerHistoryResponse, type BiomarkerOverview, type TrendResult } from '@/api';
 import { AppText } from '@/components/app-text';
 import { BiomarkerExplanationPanel } from '@/components/biomarker-explanation-panel';
 import { getBiomarkerStatusLabel, getStatusColor } from '@/components/status-utils';
 import { TrendTrack } from '@/components/trend-track';
+import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { colors, spacing } from '@/theme';
 import { formatDayMonth, formatFullDate, formatReference, formatSignedValue, formatValue, getTrendArrow } from '@/utils/formatting';
@@ -21,17 +22,47 @@ type BiomarkerDetailPanelProps = {
 
 export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error, onRetry }: BiomarkerDetailPanelProps) {
   const { isCompact } = useResponsiveLayout();
+  const { invalidateHealthData } = useHealthDataRefresh();
   const [explanation, setExplanation] = useState<BiomarkerExplanation | null>(null);
   const [explanationLoading, setExplanationLoading] = useState(false);
   const [explanationError, setExplanationError] = useState<ApiError | null>(null);
   const explanationRequestId = useRef(0);
+  const [pendingDelete, setPendingDelete] = useState<BiomarkerHistoryItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     explanationRequestId.current += 1;
     setExplanation(null);
     setExplanationLoading(false);
     setExplanationError(null);
+    setPendingDelete(null);
+    setDeleteLoading(false);
+    setDeleteError(null);
   }, [biomarker.normalized_name]);
+
+  const confirmDelete = async () => {
+    if (!pendingDelete || deleteLoading) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await deleteManualMeasurement(pendingDelete.measurement_id);
+      setPendingDelete(null);
+      invalidateHealthData();
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        setDeleteError('Your session has expired. Please sign in again.');
+      } else if (requestError instanceof ApiError && requestError.status === 404) {
+        setDeleteError('This manual measurement is no longer available.');
+      } else if (requestError instanceof ApiError) {
+        setDeleteError(requestError.message);
+      } else {
+        setDeleteError('The measurement could not be deleted. Please try again.');
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const requestExplanation = async () => {
     const currentRequest = ++explanationRequestId.current;
@@ -82,7 +113,7 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
   const latestHistoryItem = history.history.at(-1);
   const latestReference = latestHistoryItem ? formatReference(latestHistoryItem) : null;
   const chartPoints = history.history.map((item, index) => ({
-    key: `${item.report_id}-${index}`,
+    key: `${item.measurement_id}-${index}`,
     label: formatDayMonth(item.uploaded_at),
     value: item.value,
   }));
@@ -99,14 +130,14 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
           <AppText variant="measurement" style={[styles.numeric, { color: biomarker.latest_status === 'normal' || biomarker.latest_status === 'unknown' ? colors.textPrimary : statusColor }]}>
             {formatValue(biomarker.latest_value)} <AppText color="textMuted">{biomarker.latest_unit}</AppText>
           </AppText>
-          <AppText variant="metadata" style={{ color: statusColor }}>{getBiomarkerStatusLabel(biomarker.latest_status)}</AppText>
+          <AppText variant="metadata" style={{ color: statusColor }}>{getBiomarkerStatusLabel(biomarker.latest_status, biomarker.latest_source)}</AppText>
           <AppText variant="caption" color="textMuted">{biomarker.measurement_count} recorded {biomarker.measurement_count === 1 ? 'measurement' : 'measurements'}</AppText>
         </View>
       </View>
 
       <View style={styles.referenceBlock}>
-        <AppText variant="metadata" color="textFaint">Latest Report Reference</AppText>
-        <AppText variant="bodyStrong" color="textSecondary">{latestReference ?? 'Not available in the report'}{latestReference ? ` ${biomarker.latest_unit}` : ''}</AppText>
+        <AppText variant="metadata" color="textFaint">{latestHistoryItem?.source === 'manual' ? 'Reference Entered' : 'Latest Report Reference'}</AppText>
+        <AppText variant="bodyStrong" color="textSecondary">{latestReference ?? (latestHistoryItem?.source === 'manual' ? 'No reference entered' : 'Not available in the report')}{latestReference ? ` ${biomarker.latest_unit}` : ''}</AppText>
       </View>
 
       <View style={styles.trendSection}>
@@ -151,23 +182,60 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
           <AppText variant="metadata" color="textMuted">Measurements</AppText>
           <AppText variant="caption" color="textMuted">{history.count} total</AppText>
         </View>
-        {history.history.length ? history.history.map((item, index) => {
+        {history.history.length ? history.history.map((item) => {
           const itemStatusColor = getStatusColor(item.status);
           const reference = formatReference(item);
           return (
-            <View key={`${item.report_id}-${index}`} style={[styles.historyRow, isCompact && styles.compactHistoryRow]}>
+            <View key={item.measurement_id} style={[styles.historyRow, isCompact && styles.compactHistoryRow]}>
               <View style={styles.historyContext}>
                 <AppText variant="label">{formatFullDate(item.uploaded_at)}</AppText>
-                <AppText variant="caption" color="textMuted">Report #{item.report_id} · {reference ? `Reference ${reference}` : 'Reference unavailable'}</AppText>
+                <AppText variant="caption" color="textMuted">{item.source === 'manual' ? 'Manual entry' : 'Laboratory report'} · {reference ? `${item.source === 'manual' ? 'Entered reference' : 'Report reference'} ${reference}` : 'Reference unavailable'}</AppText>
               </View>
               <View style={[styles.historyValue, isCompact && styles.compactHistoryValue]}>
                 <AppText variant="bodyStrong" style={styles.numeric}>{formatValue(item.value)} <AppText variant="caption" color="textMuted">{item.unit}</AppText></AppText>
-                <AppText variant="metadata" style={{ color: itemStatusColor }}>{getBiomarkerStatusLabel(item.status)}</AppText>
+                <AppText variant="metadata" style={{ color: itemStatusColor }}>{getBiomarkerStatusLabel(item.status, item.source)}</AppText>
+                {item.source === 'manual' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setDeleteError(null);
+                      setPendingDelete(item);
+                    }}
+                    style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
+                    <AppText variant="caption" color="textMuted">Delete measurement</AppText>
+                  </Pressable>
+                ) : null}
               </View>
             </View>
           );
         }) : <AppText variant="caption" color="textMuted" style={styles.noHistory}>No stored measurements are available.</AppText>}
       </View>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={pendingDelete !== null}
+        onRequestClose={() => {
+          if (!deleteLoading) setPendingDelete(null);
+        }}>
+        <View style={styles.confirmBackdrop}>
+          <View accessibilityViewIsModal style={styles.confirmDialog}>
+            <View style={styles.confirmCopy}>
+              <AppText variant="section">Delete measurement</AppText>
+              <AppText color="textSecondary">Delete this manually entered measurement? This cannot be undone.</AppText>
+              {deleteError ? <AppText variant="caption" color="statusHigh">{deleteError}</AppText> : null}
+            </View>
+            <View style={styles.confirmActions}>
+              <Pressable accessibilityRole="button" disabled={deleteLoading} onPress={() => setPendingDelete(null)} style={({ pressed, hovered }) => [styles.confirmAction, (pressed || hovered) && !deleteLoading && styles.active]}>
+                <AppText variant="label" color="textSecondary">Cancel</AppText>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityState={{ busy: deleteLoading, disabled: deleteLoading }} disabled={deleteLoading} onPress={() => void confirmDelete()} style={({ pressed, hovered }) => [styles.deleteAction, deleteLoading && styles.disabled, (pressed || hovered) && !deleteLoading && styles.active]}>
+                {deleteLoading ? <ActivityIndicator size="small" color={colors.white} /> : <AppText variant="label" color="white">Delete</AppText>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -196,4 +264,10 @@ const styles = StyleSheet.create({
   compactHistoryRow: { alignItems: 'flex-start', flexDirection: 'column', gap: spacing.sm }, historyContext: { flex: 1, minWidth: 180, gap: spacing.xxs },
   historyValue: { alignItems: 'flex-end', gap: spacing.xs }, compactHistoryValue: { width: '100%', alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
   noHistory: { paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  confirmBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(24, 36, 45, 0.42)' },
+  confirmDialog: { width: '100%', maxWidth: 440, gap: spacing.lg, padding: spacing.xl, borderTopWidth: 2, borderTopColor: colors.textPrimary, backgroundColor: colors.surface },
+  confirmCopy: { gap: spacing.sm }, confirmActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md },
+  confirmAction: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.md },
+  deleteAction: { minWidth: 90, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, backgroundColor: colors.textPrimary },
+  disabled: { opacity: 0.55 },
 });

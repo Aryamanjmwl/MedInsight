@@ -25,9 +25,9 @@ export function NeedsAttention({ biomarkers, totalCount }: NeedsAttentionProps) 
             <View style={styles.details}>
               <AppText variant="label">{item.test_name}</AppText>
               <AppText variant="section" style={[styles.numeric, { color: statusColor }]}>{formatValue(item.latest_value)} <AppText variant="caption" style={{ color: statusColor }}>{item.latest_unit}</AppText></AppText>
-              <AppText variant="caption" color="textFaint">{item.measurement_count} recorded measurements</AppText>
+              <AppText variant="caption" color="textFaint">{item.latest_source === 'manual' ? 'Manual entry' : 'Laboratory report'} · {item.measurement_count} recorded</AppText>
             </View>
-            <AppText variant="metadata" style={{ color: statusColor }}>{getStatusLabel(item.latest_status)}</AppText>
+            <AppText variant="metadata" style={{ color: statusColor }}>{getStatusLabel(item.latest_status, item.latest_source)}</AppText>
           </View>
         );
       }) : (

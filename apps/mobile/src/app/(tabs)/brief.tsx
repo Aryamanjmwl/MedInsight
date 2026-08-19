@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/page-header';
 import { Screen } from '@/components/screen';
 import { StatusBadge } from '@/components/status-badge';
 import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
+import { useManualMeasurementDialog } from '@/context/manual-measurement-context';
 import { useReportUploadDialog } from '@/context/report-upload-context';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { colors, radii, spacing } from '@/theme';
@@ -26,6 +27,7 @@ export default function DoctorBriefScreen() {
   const { isCompact } = useResponsiveLayout();
   const { revision } = useHealthDataRefresh();
   const { openReportUpload } = useReportUploadDialog();
+  const { openManualMeasurement } = useManualMeasurementDialog();
   const [brief, setBrief] = useState<DoctorVisitBriefResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,15 +87,16 @@ export default function DoctorBriefScreen() {
     );
   }
 
-  if (!brief || brief.report_count === 0) {
+  if (!brief || brief.latest_measurements.length === 0) {
     return (
       <Screen>
         <PageHeader title="Doctor Visit Brief" description="Generated from your saved lab record." />
         <StatePanel>
-          <AppText variant="title">Upload a lab report to create your doctor visit brief.</AppText>
+          <AppText variant="title">Add laboratory measurements to create your doctor visit brief.</AppText>
           <AppText color="textSecondary">The brief will organize structured results for appointment preparation without diagnosing or assigning severity.</AppText>
           <View style={styles.actions}>
             <Action label="Upload report" onPress={openReportUpload} outlined />
+            <Action label="Add measurement" onPress={openManualMeasurement} />
             <Action label="Refresh" onPress={() => void loadBrief(true)} />
           </View>
         </StatePanel>
@@ -123,7 +126,7 @@ export default function DoctorBriefScreen() {
             <OverviewFact label="Saved reports" value={String(brief.report_count)} />
             <OverviewFact label="Latest report" value={brief.latest_report_date ? formatFullDate(brief.latest_report_date) : 'Unavailable'} />
             <OverviewFact label="Latest biomarkers" value={String(brief.latest_measurements.length)} />
-            <OverviewFact label="Outside report range" value={String(brief.needs_attention.length)} />
+            <OverviewFact label="Outside supplied range" value={String(brief.needs_attention.length)} />
           </View>
           <View style={styles.rows}>
             {brief.recent_reports.map((report) => (
@@ -138,8 +141,8 @@ export default function DoctorBriefScreen() {
           </View>
         </BriefSection>
 
-        <BriefSection number="02" title="Outside Report Range">
-          {brief.needs_attention.length ? brief.needs_attention.map((item) => <MeasurementRow key={item.normalized_name} item={item} onPress={() => router.push('/biomarkers')} />) : <EmptySection text="No latest measurements are outside their report-provided ranges." />}
+        <BriefSection number="02" title="Outside Supplied Range">
+          {brief.needs_attention.length ? brief.needs_attention.map((item) => <MeasurementRow key={item.normalized_name} item={item} onPress={() => router.push('/biomarkers')} />) : <EmptySection text="No latest measurements are outside their supplied reference ranges." />}
         </BriefSection>
 
         <BriefSection number="03" title="Changes Over Time">
@@ -157,7 +160,7 @@ export default function DoctorBriefScreen() {
               <MeasurementRow item={item} onPress={() => router.push('/biomarkers')} />
               <AppText variant="caption" color="textMuted">{item.reason}</AppText>
             </View>
-          )) : <EmptySection text="All latest measurements with stored results had usable report-provided reference information." />}
+          )) : <EmptySection text="All latest measurements had usable supplied reference information." />}
         </BriefSection>
 
         <BriefSection number="06" title="Questions to Discuss">
@@ -190,11 +193,11 @@ function MeasurementRow({ item, onPress }: { item: BriefMeasurement; onPress: ()
     <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed, hovered }) => [styles.row, isCompact && styles.compactRow, (pressed || hovered) && styles.rowActive]}>
       <View style={styles.rowCopy}>
         <AppText variant="bodyStrong">{item.display_name}</AppText>
-        <AppText variant="caption" color="textMuted">{formatFullDate(item.measurement_date)} · {reference ? `Report reference ${reference}` : 'Report reference unavailable'}</AppText>
+        <AppText variant="caption" color="textMuted">{formatFullDate(item.measurement_date)} · {item.source === 'manual' ? 'Manual entry' : 'Laboratory report'} · {reference ? `${item.source === 'manual' ? 'Entered reference' : 'Report reference'} ${reference}` : 'Reference unavailable'}</AppText>
       </View>
       <View style={[styles.valueBlock, isCompact && styles.compactValueBlock]}>
         <AppText variant="bodyStrong" style={styles.numeric}>{formatValue(item.value)} <AppText variant="caption" color="textMuted">{item.unit}</AppText></AppText>
-        <StatusBadge status={item.status} />
+        <StatusBadge status={item.status} source={item.source} />
       </View>
     </Pressable>
   );

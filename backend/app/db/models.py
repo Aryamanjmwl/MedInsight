@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String, Text, Uuid, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from ..biomarkers import MeasurementSource
 from .database import Base
 
 
@@ -43,11 +44,29 @@ class BiomarkerResult(Base):
             "normalized_name",
             "report_id",
         ),
+        Index(
+            "ix_biomarker_results_user_name_measured",
+            "user_id",
+            "normalized_name",
+            "measured_at",
+        ),
+        CheckConstraint(
+            "(source = 'report' AND report_id IS NOT NULL) OR "
+            "(source = 'manual' AND report_id IS NULL AND user_id IS NOT NULL)",
+            name="ck_biomarker_results_source_report",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    report_id: Mapped[int] = mapped_column(
-        ForeignKey("reports.id", ondelete="CASCADE"), nullable=False, index=True
+    report_id: Mapped[int | None] = mapped_column(
+        ForeignKey("reports.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    user_id: Mapped[UUID | None] = mapped_column(Uuid, nullable=True)
+    source: Mapped[str] = mapped_column(
+        String(20), default=MeasurementSource.REPORT.value, nullable=False
+    )
+    measured_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=False
     )
     test_name: Mapped[str] = mapped_column(String(255), nullable=False)
     normalized_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -60,4 +79,17 @@ class BiomarkerResult(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     source_text: Mapped[str] = mapped_column(Text, nullable=False)
 
-    report: Mapped[Report] = relationship(back_populates="biomarkers")
+    report: Mapped[Report | None] = relationship(back_populates="biomarkers")
+
+
+@event.listens_for(BiomarkerResult, "before_insert")
+def populate_report_measurement_metadata(_mapper, _connection, target: BiomarkerResult) -> None:
+    """Populate derived ownership/date fields for report-backed ORM inserts."""
+    if target.source is None:
+        target.source = MeasurementSource.REPORT.value
+    if target.source != MeasurementSource.REPORT.value or target.report is None:
+        return
+    if target.user_id is None:
+        target.user_id = target.report.user_id
+    if target.measured_at is None:
+        target.measured_at = target.report.uploaded_at

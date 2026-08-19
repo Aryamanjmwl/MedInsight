@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { AppText } from '@/components/app-text';
 import { useAuth } from '@/context/auth-context';
+import { useManualMeasurementDialog } from '@/context/manual-measurement-context';
 import { useReportUploadDialog } from '@/context/report-upload-context';
 import { colors, layout, radii, spacing, typography } from '@/theme';
 
@@ -18,6 +19,7 @@ export function DesktopHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { openReportUpload } = useReportUploadDialog();
+  const { openManualMeasurement } = useManualMeasurementDialog();
   const { user } = useAuth();
   const accountInitial = user?.email?.trim().charAt(0).toUpperCase() || '?';
 
@@ -54,6 +56,10 @@ export function DesktopHeader() {
         </View>
 
         <View style={styles.actions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add laboratory measurement" onPress={openManualMeasurement} style={({ hovered, pressed }) => [styles.secondaryAction, (hovered || pressed) && styles.actionHovered]}>
+            <Feather color={colors.brand} name="plus" size={15} />
+            <AppText variant="label" color="brand">Add measurement</AppText>
+          </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Upload report" onPress={openReportUpload} style={({ hovered, pressed }) => [styles.outlineAction, (hovered || pressed) && styles.actionHovered]}>
             <Feather color={colors.white} name="upload" size={15} />
             <AppText variant="label" color="white">Upload report</AppText>
@@ -82,6 +88,7 @@ const styles = StyleSheet.create({
   navItemActive: { borderBottomColor: colors.textPrimary },
   navItemHovered: { opacity: 0.72 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  secondaryAction: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.md },
   outlineAction: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radii.sm, backgroundColor: colors.brand },
   actionHovered: { opacity: 0.76 },
   avatar: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.pill, backgroundColor: colors.surface },

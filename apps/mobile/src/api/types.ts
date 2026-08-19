@@ -1,6 +1,7 @@
 export type IsoDateTime = string;
 
 export type BiomarkerStatus = 'low' | 'normal' | 'high' | 'unknown';
+export type MeasurementSource = 'report' | 'manual';
 export type ReferenceOperator = '<' | '<=' | '>' | '>=';
 export type TrendDirection = 'increasing' | 'decreasing' | 'stable' | 'insufficient_data';
 export type TrendIssue = 'insufficient_measurements' | 'mixed_units';
@@ -55,12 +56,15 @@ export interface BiomarkerOverview {
   latest_unit: string;
   latest_status: BiomarkerStatus;
   latest_report_date: IsoDateTime;
+  latest_source: MeasurementSource;
   measurement_count: number;
 }
 
 export interface BiomarkerHistoryItem {
-  report_id: number;
+  measurement_id: number;
+  report_id: number | null;
   uploaded_at: IsoDateTime;
+  source: MeasurementSource;
   value: number;
   unit: string;
   status: BiomarkerStatus;
@@ -103,12 +107,25 @@ export interface TrendResult {
 
 export type DashboardBiomarkerSummary = BiomarkerOverview;
 
+export interface DashboardManualMeasurement {
+  measurement_id: number;
+  normalized_name: string;
+  test_name: string;
+  measured_at: IsoDateTime;
+  value: number;
+  unit: string;
+  status: BiomarkerStatus;
+  source: 'manual';
+}
+
 export interface DashboardSummaryResponse {
   total_reports: number;
   total_distinct_biomarkers: number;
   abnormal_biomarker_count: number;
   latest_report_date: IsoDateTime | null;
+  latest_health_record_date: IsoDateTime | null;
   latest_biomarkers: DashboardBiomarkerSummary[];
+  recent_manual_measurements: DashboardManualMeasurement[];
   trends: TrendResult[];
 }
 
@@ -121,7 +138,8 @@ export interface BriefRecentReport {
 }
 
 export interface BriefMeasurement {
-  report_id: number;
+  report_id: number | null;
+  source: MeasurementSource;
   normalized_name: string;
   display_name: string;
   value: number;
@@ -132,6 +150,41 @@ export interface BriefMeasurement {
   reference_operator: ReferenceOperator | null;
   raw_reference: string;
   measurement_date: IsoDateTime;
+}
+
+export interface SupportedBiomarker {
+  normalized_name: string;
+  display_name: string;
+}
+
+export interface ManualMeasurementCreate {
+  normalized_name: string;
+  value: number;
+  unit: string;
+  measurement_date: string;
+  reference_low: number | null;
+  reference_high: number | null;
+  reference_operator: ReferenceOperator | null;
+}
+
+export interface ManualMeasurementResponse {
+  measurement_id: number;
+  normalized_name: string;
+  test_name: string;
+  value: number;
+  unit: string;
+  measurement_date: IsoDateTime;
+  reference_low: number | null;
+  reference_high: number | null;
+  reference_operator: ReferenceOperator | null;
+  raw_reference: string;
+  status: BiomarkerStatus;
+  source: 'manual';
+}
+
+export interface ManualMeasurementDeleteResponse {
+  measurement_id: number;
+  status: 'deleted';
 }
 
 export interface BriefUnclassifiedMeasurement extends BriefMeasurement {

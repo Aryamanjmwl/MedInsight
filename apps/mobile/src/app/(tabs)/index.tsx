@@ -11,6 +11,7 @@ import { NeedsAttention } from '@/components/needs-attention';
 import { RecordHeader } from '@/components/record-header';
 import { Screen } from '@/components/screen';
 import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
+import { useManualMeasurementDialog } from '@/context/manual-measurement-context';
 import { useReportUploadDialog } from '@/context/report-upload-context';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { layout, spacing } from '@/theme';
@@ -19,6 +20,7 @@ export default function DashboardScreen() {
   const { isDesktop } = useResponsiveLayout();
   const { revision } = useHealthDataRefresh();
   const { openReportUpload } = useReportUploadDialog();
+  const { openManualMeasurement } = useManualMeasurementDialog();
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [reports, setReports] = useState<SavedReportSummary[]>([]);
   const [error, setError] = useState<ApiError | null>(null);
@@ -72,11 +74,16 @@ export default function DashboardScreen() {
     return <Screen><DashboardErrorState onRetry={() => void loadDashboard()} /></Screen>;
   }
 
-  if (!summary || summary.total_reports === 0 || summary.latest_report_date === null) {
+  if (
+    !summary
+    || (summary.total_reports === 0 && summary.total_distinct_biomarkers === 0)
+    || summary.latest_health_record_date === null
+  ) {
     return (
       <Screen>
         <DashboardEmptyState
           onUpload={openReportUpload}
+          onAddMeasurement={openManualMeasurement}
           onRefresh={() => void loadDashboard(true)}
           refreshing={refreshing}
           refreshFailed={error !== null}
@@ -91,20 +98,21 @@ export default function DashboardScreen() {
   return (
     <Screen>
       <RecordHeader
-        latestReportDate={summary.latest_report_date}
+        latestRecordDate={summary.latest_health_record_date}
         reportCount={summary.total_reports}
         biomarkerCount={summary.total_distinct_biomarkers}
         refreshing={refreshing}
         onRefresh={() => void loadDashboard(true)}
         onUpload={openReportUpload}
+        onAddMeasurement={openManualMeasurement}
       />
       {error ? <DashboardRefreshError onRetry={() => void loadDashboard(true)} /> : null}
       {isDesktop ? (
         <View style={styles.desktopGrid}>
           <View style={styles.mainColumn}>
-            <LatestReportPanel summary={summary} report={reports[0]} />
+            {reports[0] ? <LatestReportPanel summary={summary} report={reports[0]} /> : null}
             <BiomarkerExplorer trends={summary.trends} biomarkers={summary.latest_biomarkers} />
-            {reports.length ? <HealthTimeline reports={reports.slice(0, 5)} /> : null}
+            {reports.length || summary.recent_manual_measurements.length ? <HealthTimeline reports={reports.slice(0, 5)} manualMeasurements={summary.recent_manual_measurements} /> : null}
           </View>
           <View style={styles.supportingRail}>
             <NeedsAttention biomarkers={attentionBiomarkers.slice(0, 3)} totalCount={summary.abnormal_biomarker_count} />
@@ -113,11 +121,11 @@ export default function DashboardScreen() {
         </View>
       ) : (
         <View style={styles.mobileFlow}>
-          <LatestReportPanel summary={summary} report={reports[0]} />
+          {reports[0] ? <LatestReportPanel summary={summary} report={reports[0]} /> : null}
           <BiomarkerExplorer trends={summary.trends} biomarkers={summary.latest_biomarkers} />
           <NeedsAttention biomarkers={attentionBiomarkers.slice(0, 3)} totalCount={summary.abnormal_biomarker_count} />
           <LatestMeasurements biomarkers={latestBiomarkers} trends={summary.trends} />
-          {reports.length ? <HealthTimeline reports={reports.slice(0, 5)} /> : null}
+          {reports.length || summary.recent_manual_measurements.length ? <HealthTimeline reports={reports.slice(0, 5)} manualMeasurements={summary.recent_manual_measurements} /> : null}
         </View>
       )}
     </Screen>

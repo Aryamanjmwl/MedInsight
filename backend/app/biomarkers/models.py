@@ -13,6 +13,11 @@ class BiomarkerStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class MeasurementSource(str, Enum):
+    REPORT = "report"
+    MANUAL = "manual"
+
+
 class Biomarker(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

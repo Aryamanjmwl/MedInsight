@@ -58,10 +58,15 @@ async function getResponseErrorMessage(response: Response) {
     if (
       typeof payload === 'object' &&
       payload !== null &&
-      'detail' in payload &&
-      typeof payload.detail === 'string'
+      'detail' in payload
     ) {
-      return payload.detail;
+      if (typeof payload.detail === 'string') return payload.detail;
+      if (Array.isArray(payload.detail)) {
+        const firstMessage = payload.detail.find(
+          (item): item is { msg: string } => typeof item === 'object' && item !== null && 'msg' in item && typeof item.msg === 'string',
+        )?.msg;
+        if (firstMessage) return firstMessage.replace(/^Value error,\s*/i, '');
+      }
     }
   } catch {
     // The HTTP status remains the useful signal when an error body is not JSON.
@@ -170,6 +175,36 @@ export function postJson<T>(
     endpoint,
     {
       method: 'POST',
+      headers: { Accept: 'application/json' },
+    },
+    fetchImplementation,
+  );
+}
+
+export function postJsonBody<T>(
+  endpoint: string,
+  body: unknown,
+  fetchImplementation: FetchImplementation = globalThis.fetch,
+) {
+  return requestJson<T>(
+    endpoint,
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    fetchImplementation,
+  );
+}
+
+export function deleteJson<T>(
+  endpoint: string,
+  fetchImplementation: FetchImplementation = globalThis.fetch,
+) {
+  return requestJson<T>(
+    endpoint,
+    {
+      method: 'DELETE',
       headers: { Accept: 'application/json' },
     },
     fetchImplementation,
