@@ -20,6 +20,7 @@ async def request_app(
     application: FastAPI,
     method: str,
     headers: dict[str, str],
+    path: str = "/probe",
 ) -> tuple[int, dict[str, str]]:
     messages: list[dict] = []
     request_received = False
@@ -40,8 +41,8 @@ async def request_app(
         "http_version": "1.1",
         "method": method,
         "scheme": "http",
-        "path": "/probe",
-        "raw_path": b"/probe",
+        "path": path,
+        "raw_path": path.encode("ascii"),
         "query_string": b"",
         "root_path": "",
         "headers": [
@@ -140,6 +141,38 @@ class CorsMiddlewareTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Accept", headers.get("access-control-allow-headers", ""))
         self.assertIn("Content-Type", headers.get("access-control-allow-headers", ""))
         self.assertIn("Authorization", headers.get("access-control-allow-headers", ""))
+
+    async def test_allowed_origin_can_preflight_manual_measurement_delete(self) -> None:
+        status, headers = await request_app(
+            make_test_app(),
+            "OPTIONS",
+            {
+                "Origin": ALLOWED_ORIGIN,
+                "Access-Control-Request-Method": "DELETE",
+                "Access-Control-Request-Headers": "Authorization",
+            },
+            path="/biomarkers/manual/42",
+        )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("access-control-allow-origin"), ALLOWED_ORIGIN)
+        self.assertIn("DELETE", headers.get("access-control-allow-methods", ""))
+        self.assertIn("Authorization", headers.get("access-control-allow-headers", ""))
+
+    async def test_disallowed_origin_cannot_preflight_manual_measurement_delete(self) -> None:
+        status, headers = await request_app(
+            make_test_app(),
+            "OPTIONS",
+            {
+                "Origin": DISALLOWED_ORIGIN,
+                "Access-Control-Request-Method": "DELETE",
+                "Access-Control-Request-Headers": "Authorization",
+            },
+            path="/biomarkers/manual/42",
+        )
+
+        self.assertEqual(status, 400)
+        self.assertNotIn("access-control-allow-origin", headers)
 
 
 if __name__ == "__main__":

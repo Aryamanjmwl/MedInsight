@@ -8,6 +8,26 @@ The project is being developed as a full-stack AI healthcare system with a Pytho
 
 MedInsight is currently under active development.
 
+## Backend production runtime
+
+Run migrations and start the API from the repository root. A normal Linux host
+can use Python 3.12 and these commands after installing `backend/requirements.txt`:
+
+```sh
+python -m alembic -c backend/alembic.ini upgrade head
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port "$PORT"
+```
+
+Production requires a PostgreSQL `DATABASE_URL`, `SUPABASE_URL`, and an explicit
+comma-separated `MEDINSIGHT_CORS_ORIGINS` allowlist for browser clients.
+`SUPABASE_JWT_AUDIENCE` defaults to `authenticated`. AI explanations optionally
+use server-only `OPENAI_API_KEY` and `MEDINSIGHT_AI_MODEL` values.
+
+OCR requires the Linux system packages `tesseract-ocr` and
+`tesseract-ocr-eng`. The executable is resolved from `PATH` by default;
+`MEDINSIGHT_TESSERACT_CMD` remains available for an explicit Linux or Windows
+path. No local persistent filesystem is required when PostgreSQL is configured.
+
 ## Backend CORS configuration
 
 The backend permits the current Expo Web development origins by default:
@@ -40,11 +60,13 @@ keys are cached and refreshed by the JWT library when needed. Missing tokens and
 invalid or expired tokens return HTTP 401. `/` and `/health` remain public;
 report processing and all persisted health-data endpoints require authentication.
 
-Every newly saved report receives the authenticated user's UUID. All report,
-biomarker, history, trend, dashboard, doctor-brief, and AI-explanation queries
-filter by that owner at the database query boundary. Biomarker rows inherit
-ownership through their report. Looking up another user's report returns the
-same 404 as a missing report. AI context is built only after the scoped lookup.
+Every newly saved report and manual measurement receives the authenticated
+user's UUID. All report, biomarker, history, trend, dashboard, doctor-brief, and
+AI-explanation queries filter by that owner at the database query boundary.
+Report-derived biomarker rows receive their report owner's UUID; manual rows
+receive the authenticated owner directly. Looking up another user's data uses
+the same not-found behavior as missing data. AI context is built only after the
+scoped lookup.
 
 ## Database migrations and Supabase RLS
 
@@ -71,12 +93,12 @@ recovery must be an explicit, audited administrative migration backed by real
 identity evidence. Application-created rows always have an owner even though
 the transition column remains nullable to preserve quarantined legacy rows.
 
-On PostgreSQL, the ownership migration enables RLS and creates `authenticated`
-policies for reports and report-linked biomarker rows using `auth.uid()`. These
+On PostgreSQL, the ownership migrations enable RLS and create `authenticated`
+policies for reports and directly owned biomarker rows using `auth.uid()`. These
 policies protect direct Supabase access. FastAPI still applies ownership filters
 because privileged server database roles can bypass RLS; RLS is defense in depth.
-Indexes cover `(reports.user_id, reports.uploaded_at)` and
-`(biomarker_results.normalized_name, biomarker_results.report_id)`.
+Indexes cover report ownership/date, report-linked biomarker lookups, and
+user/biomarker measurement chronology.
 
 ## PDF text extraction and OCR
 
