@@ -28,6 +28,17 @@ OCR requires the Linux system packages `tesseract-ocr` and
 `MEDINSIGHT_TESSERACT_CMD` remains available for an explicit Linux or Windows
 path. No local persistent filesystem is required when PostgreSQL is configured.
 
+Build and run the production backend image locally with:
+
+```sh
+docker build -t medinsight-backend:local .
+docker run --rm -p 8000:8000 -e PORT=8000 medinsight-backend:local
+```
+
+The image includes Tesseract and its English language data. Runtime secrets and
+database configuration must be supplied as environment variables, not build
+arguments or image files.
+
 ## Backend CORS configuration
 
 The backend permits the current Expo Web development origins by default:
