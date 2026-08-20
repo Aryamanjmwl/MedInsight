@@ -1,218 +1,347 @@
 # MedInsight
 
-MedInsight is a cross-platform health intelligence application for transforming laboratory reports into structured, understandable, and longitudinal health information.
+MedInsight is a privacy-conscious health record application that turns laboratory reports into structured, longitudinal health information.
 
-The project is being developed as a full-stack AI healthcare system with a Python backend and installable client applications.
+It combines deterministic lab-value extraction and classification with timeline-based tracking, manual measurement entry, doctor-visit summaries, and bounded AI explanations for individual biomarkers.
 
-## Status
+> **Live web app:** https://medinsight-web.onrender.com  
+> **Backend API:** https://medinsight-1sne.onrender.com  
+> **Status:** Public web deployment available. Native Android, iOS, and Windows installers are not released yet.
 
-MedInsight is currently under active development.
+## What MedInsight does
 
-## Backend production runtime
+MedInsight is designed to help a user organize laboratory results over time instead of treating every PDF as an isolated document.
 
-Run migrations and start the API from the repository root. A normal Linux host
-can use Python 3.12 and these commands after installing `backend/requirements.txt`:
+Core capabilities include:
+
+- Uploading machine-readable or scanned laboratory PDFs
+- Deterministic extraction of supported biomarkers, values, units, and report-provided reference ranges
+- Low / normal / high classification using only the reference information supplied by the report
+- Longitudinal biomarker history and trend views
+- Manual entry of individual laboratory measurements without creating a fake report
+- A chronological health-history timeline
+- A deterministic doctor-visit brief built from saved structured results
+- Optional AI explanations for a single biomarker using a privacy-minimized structured context
+- Per-user authentication and data isolation with Supabase Auth
+
+MedInsight does **not** diagnose disease, assign clinical severity, recommend medication, or invent medical reference ranges.
+
+## Using the live application
+
+The normal way to use MedInsight is through the deployed web application, not by running code from GitHub.
+
+1. Open **https://medinsight-web.onrender.com**.
+2. Sign in with an existing MedInsight account, or create an account when public email confirmation is available.
+3. Upload a laboratory PDF from the **Reports** area, or add an individual value with **Add measurement**.
+4. Review the **Overview** for the latest measurements, items outside their supplied reference ranges, and recent history.
+5. Open **Biomarkers** to inspect a measurement's history and deterministic trend.
+6. Use **Explain this result** for a bounded educational explanation of one saved biomarker.
+7. Open **Doctor Brief** for a concise, deterministic summary that can help prepare for a healthcare appointment.
+
+### Current signup note
+
+The application is deployed publicly, but transactional email delivery for unrestricted new-account confirmation is still being configured. Existing authenticated accounts work. This limitation is deployment configuration, not a requirement to run the source code locally.
+
+### Free-hosting behavior
+
+The current deployment uses free hosting. The backend may sleep after a period of inactivity, so the first request after a long idle period can take longer while the service wakes up.
+
+## Application availability
+
+The repository contains a cross-platform Expo client, but the currently released user-facing version is the **web application**.
+
+| Platform | Current status | How to use it |
+| --- | --- | --- |
+| Web | Live | Open https://medinsight-web.onrender.com |
+| Android | Source ready for Expo/EAS packaging | Installer not released yet |
+| iOS | Source ready for Expo/EAS packaging | Installer not released yet |
+| Windows | Planned desktop packaging | Installer not released yet |
+
+A user does **not** need Python, Node.js, Docker, Supabase credentials, or an AI API key to use the deployed web application.
+
+## Architecture
+
+```text
+Browser / Expo client
+        |
+        | HTTPS + Supabase access token
+        v
+FastAPI backend (Render)
+        |
+        +--> Supabase Auth / PostgreSQL
+        |
+        +--> pypdf / PDFium / Tesseract OCR
+        |
+        +--> deterministic biomarker parser and trend engine
+        |
+        +--> Groq API for optional bounded AI explanations
+```
+
+The core health-data pipeline is deterministic. AI is not used to parse values, calculate ranges, determine status, or generate the doctor-visit brief.
+
+## Technology stack
+
+### Frontend
+
+- Expo / React Native
+- TypeScript
+- Expo Router
+- Responsive web and mobile UI
+- Supabase client authentication
+
+### Backend
+
+- Python 3.12 production runtime
+- FastAPI
+- SQLAlchemy
+- Alembic
+- PostgreSQL via `psycopg`
+- Pydantic
+
+### Document processing
+
+- `pypdf` for machine-readable PDFs
+- PDFium for page rendering
+- Tesseract OCR for scanned reports
+
+### Infrastructure
+
+- Supabase Auth
+- Supabase PostgreSQL
+- Render Docker web service
+- Render static-site frontend
+
+### Optional AI explanation layer
+
+- Groq OpenAI-compatible Responses API
+- `openai/gpt-oss-20b` default model
+- Existing OpenAI-compatible Python SDK
+- Validated structured output
+
+## Deterministic biomarker extraction
+
+MedInsight uses bounded, format-tolerant deterministic extraction for common laboratory layouts.
+
+The parser currently recognizes a curated vocabulary of 36 common biomarkers through explicit aliases and supports common single-line, whitespace/pipe table, dot-leader, and short multi-line layouts. It handles decimal points, decimal commas, carefully constrained thousands grouping, common laboratory units, and report-supplied ranges or comparison thresholds.
+
+Units are normalized only when their spelling is safely equivalent. MedInsight does not convert values between units and does not infer a medical reference range when the report does not provide one.
+
+A measurement without a usable report-provided reference remains **Not classified**. Missing units, ambiguous values, unsupported analytes, and uncertain layouts are rejected instead of guessed.
+
+The parser is intentionally bounded and does not claim to support every laboratory, analyte, or possible report layout.
+
+## PDF extraction and OCR
+
+Machine-readable PDFs are extracted with `pypdf`. When direct extraction produces insufficient text, the backend renders pages with PDFium and runs local Tesseract OCR.
+
+Current OCR safeguards include:
+
+- Maximum 25 pages
+- 250 DPI page rendering
+- 30-second timeout per page
+- English OCR configuration
+- No cloud OCR service
+- No persistence of raw PDFs, rendered page images, or complete extracted/OCR text
+
+OCR quality depends on scan resolution, orientation, contrast, and document layout.
+
+## Manual measurements
+
+Users can save an individual laboratory measurement directly instead of creating or uploading a PDF.
+
+Manual and report-derived measurements share the same longitudinal biomarker history while preserving their provenance. Manual entries have their own measurement date and owner and do not create artificial report records.
+
+Reference information is optional. If a reference is supplied, MedInsight reuses its deterministic classifier; if no reference is supplied, the measurement remains **Not classified**.
+
+Manual measurements can be deleted by their owner. Editing is currently handled as delete-and-readd rather than an in-place edit flow.
+
+## Trends and dashboard
+
+The dashboard and biomarker history use the effective measurement date:
+
+- report-derived results use the report date
+- manual measurements use their explicit measurement date
+
+Trends are calculated only across comparable units. Mixed-unit histories are intentionally treated as non-comparable rather than converted automatically.
+
+## Doctor Visit Brief
+
+`GET /dashboard/doctor-brief` creates an on-demand deterministic summary from the authenticated user's structured record.
+
+It can include:
+
+- recent reports
+- latest biomarker measurements
+- latest values outside supplied reference ranges
+- comparable deterministic changes over time
+- measurements without usable reference information
+- a small set of factual questions to discuss with a healthcare professional
+
+The brief does not use AI and is not persisted.
+
+## AI biomarker explanations
+
+MedInsight offers an optional educational explanation for a single saved biomarker through:
+
+```text
+POST /biomarkers/{normalized_name}/explain
+```
+
+The deterministic parser, report-provided reference data, stored value, status, date, and trend remain the source of truth.
+
+Only an allowlisted structured biomarker context is sent to the AI provider. MedInsight does not send the raw PDF, OCR image, complete report text, filename, user email, user ID, report ID, or unrelated health history to the provider.
+
+The backend currently uses Groq's OpenAI-compatible API. Server-side configuration uses:
+
+```env
+GROQ_API_KEY=
+MEDINSIGHT_AI_MODEL=openai/gpt-oss-20b
+```
+
+The key belongs only on the backend. It must never be placed in an `EXPO_PUBLIC_*` variable or committed to GitHub.
+
+If the AI provider is unavailable, deterministic MedInsight features continue to work and only the optional explanation feature is affected.
+
+AI explanations are educational and can contain errors. They are not diagnoses or treatment recommendations.
+
+## Authentication and data ownership
+
+MedInsight uses Supabase Auth with email/password sessions.
+
+The backend verifies access tokens against the Supabase JWKS endpoint and validates signature, issuer, audience, expiration, issued-at time, and subject. Protected health-data endpoints require authentication; `/` and `/health` remain public.
+
+Every persisted report and manual measurement is associated with the authenticated user's UUID. Report, biomarker, history, trend, dashboard, doctor-brief, and AI-explanation queries apply user ownership at the database query boundary.
+
+PostgreSQL Row Level Security is enabled as defense in depth. Application-level ownership checks remain mandatory because privileged server roles can bypass RLS.
+
+## Privacy and security principles
+
+- Raw uploaded reports are not stored as permanent application data.
+- Complete extracted/OCR report text is not persisted.
+- AI receives only a bounded structured context for the selected biomarker.
+- Database credentials and provider secrets remain server-side.
+- The Expo client uses only public Supabase configuration.
+- Real `.env` files are ignored by Git.
+- A Supabase service-role secret must never be placed in the client.
+- Unknown or ambiguous medical data is rejected or left unclassified instead of guessed.
+
+## Repository security
+
+Only example environment files belong in source control.
+
+`backend/.env.example` contains placeholders such as:
+
+```env
+DATABASE_URL=sqlite:///backend/data/medinsight.db
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_JWT_AUDIENCE=authenticated
+MEDINSIGHT_CORS_ORIGINS=https://your-frontend.example.com
+GROQ_API_KEY=
+MEDINSIGHT_AI_MODEL=openai/gpt-oss-20b
+```
+
+`apps/mobile/.env.example` contains public client configuration placeholders only.
+
+Never commit:
+
+- a real `DATABASE_URL`
+- Supabase database passwords
+- Supabase service-role / secret keys
+- `GROQ_API_KEY`
+- private certificates or signing keys
+- real patient reports or private medical datasets
+
+## Running locally
+
+### 1. Clone the repository
+
+```sh
+git clone https://github.com/Aryamanjmwl/MedInsight.git
+cd MedInsight
+```
+
+### 2. Backend environment
+
+Create `backend/.env` from `backend/.env.example` and provide the required local values.
+
+Create/activate a Python environment and install dependencies:
+
+```sh
+python -m venv backend/.venv
+python -m pip install -r backend/requirements.txt
+```
+
+Run database migrations:
 
 ```sh
 python -m alembic -c backend/alembic.ini upgrade head
-python -m uvicorn backend.app.main:app --host 0.0.0.0 --port "$PORT"
 ```
 
-Production requires a PostgreSQL `DATABASE_URL`, `SUPABASE_URL`, and an explicit
-comma-separated `MEDINSIGHT_CORS_ORIGINS` allowlist for browser clients.
-`SUPABASE_JWT_AUDIENCE` defaults to `authenticated`. AI explanations optionally
-use server-only `GROQ_API_KEY` and `MEDINSIGHT_AI_MODEL` values.
+Start the backend from the repository root:
 
-OCR requires the Linux system packages `tesseract-ocr` and
-`tesseract-ocr-eng`. The executable is resolved from `PATH` by default;
-`MEDINSIGHT_TESSERACT_CMD` remains available for an explicit Linux or Windows
-path. No local persistent filesystem is required when PostgreSQL is configured.
+```sh
+python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --env-file backend/.env
+```
 
-Build and run the production backend image locally with:
+### 3. Frontend environment
+
+Create `apps/mobile/.env` from `apps/mobile/.env.example` and provide only public client configuration.
+
+```sh
+cd apps/mobile
+npm install
+npx expo start --web
+```
+
+## Production backend
+
+The production backend is containerized with the root-level `Dockerfile` and uses Python 3.12.
+
+Build locally with Docker:
 
 ```sh
 docker build -t medinsight-backend:local .
 docker run --rm -p 8000:8000 -e PORT=8000 medinsight-backend:local
 ```
 
-The image includes Tesseract and its English language data. Runtime secrets and
-database configuration must be supplied as environment variables, not build
-arguments or image files.
+The production image installs:
 
-## Backend CORS configuration
-
-The backend permits the current Expo Web development origins by default:
-`http://localhost:8081` and `http://127.0.0.1:8081`.
-
-Set `MEDINSIGHT_CORS_ORIGINS` to a comma-separated list to replace those local
-defaults, for example:
-
-```powershell
-$env:MEDINSIGHT_CORS_ORIGINS="http://localhost:8081,http://127.0.0.1:8081"
+```text
+tesseract-ocr
+tesseract-ocr-eng
 ```
 
-Production deployments should explicitly provide their actual frontend origins.
-Wildcard origins are intentionally not enabled.
+Runtime secrets and database configuration are supplied as environment variables and are not copied into the image.
 
-## Authentication and data ownership
+## Database migrations
 
-MedInsight uses Supabase Auth email/password sessions. The Expo client needs only
-the public project URL and public anon/publishable key shown in
-`apps/mobile/.env.example`; a Supabase service-role key must never be placed in
-the client. Native sessions are persisted with Expo SecureStore and web sessions
-use browser storage. Backend API requests attach the current access token as a
-Bearer token.
+Alembic is the production schema authority.
 
-The backend verifies access tokens cryptographically against the Supabase JWKS
-endpoint derived from `SUPABASE_URL`. It requires a valid signature, expiration,
-issuer, audience (`authenticated` by default), issued-at time, and UUID subject.
-It does not decode unverified claims or call Supabase once per request; signing
-keys are cached and refreshed by the JWT library when needed. Missing tokens and
-invalid or expired tokens return HTTP 401. `/` and `/health` remain public;
-report processing and all persisted health-data endpoints require authentication.
-
-Every newly saved report and manual measurement receives the authenticated
-user's UUID. All report, biomarker, history, trend, dashboard, doctor-brief, and
-AI-explanation queries filter by that owner at the database query boundary.
-Report-derived biomarker rows receive their report owner's UUID; manual rows
-receive the authenticated owner directly. Looking up another user's data uses
-the same not-found behavior as missing data. AI context is built only after the
-scoped lookup.
-
-## Database migrations and Supabase RLS
-
-Alembic is the production schema authority. For a clean database, run from the
-repository root:
-
-```powershell
-backend\.venv\Scripts\python.exe -m alembic -c backend/alembic.ini upgrade head
+```sh
+python -m alembic -c backend/alembic.ini upgrade head
 ```
 
-The local SQLite convenience startup may create missing tables for development;
-non-SQLite startup never calls `create_all`. For a pre-authentication database
-whose current tables already exist, first make a backup, then mark that schema
-as the baseline and apply ownership:
+The current migration chain includes ownership and manual-measurement support. Production PostgreSQL startup does not silently fall back to SQLite or call `create_all`.
 
-```powershell
-backend\.venv\Scripts\python.exe -m alembic -c backend/alembic.ini stamp 0001_initial_schema
-backend\.venv\Scripts\python.exe -m alembic -c backend/alembic.ini upgrade head
-```
+## Important limitations
 
-Legacy rows intentionally retain `user_id = NULL` and are invisible to every
-application user. They are not assigned automatically; any later ownership
-recovery must be an explicit, audited administrative migration backed by real
-identity evidence. Application-created rows always have an owner even though
-the transition column remains nullable to preserve quarantined legacy rows.
+MedInsight is a software project, not a medical device.
 
-On PostgreSQL, the ownership migrations enable RLS and create `authenticated`
-policies for reports and directly owned biomarker rows using `auth.uid()`. These
-policies protect direct Supabase access. FastAPI still applies ownership filters
-because privileged server database roles can bypass RLS; RLS is defense in depth.
-Indexes cover report ownership/date, report-linked biomarker lookups, and
-user/biomarker measurement chronology.
+Current limitations include:
 
-## PDF text extraction and OCR
+- The deterministic parser supports a curated set of biomarkers and common report structures, not every laboratory format.
+- OCR can fail on poor-quality scans or unusual layouts.
+- No unit conversion is performed.
+- Manual measurement editing is currently delete-and-readd.
+- AI explanations can contain errors and remain optional educational context.
+- Public account-confirmation email delivery is still being configured for unrestricted signup.
+- Native Android, iOS, and Windows installers are not released yet.
+- The free backend deployment can have a cold-start delay after inactivity.
 
-Machine-readable PDFs are extracted directly with `pypdf`. When that produces
-insufficient text, the backend renders the PDF one page at a time with PDFium
-and runs local Tesseract OCR. No cloud OCR or external medical-data service is
-used. OCR is synchronous, limited to 25 pages, rendered at 250 DPI, and has a
-30-second timeout per page.
+## Medical disclaimer
 
-Tesseract is a separate system dependency and is not bundled in this repository.
-For Windows development, install a current Tesseract 5 build referenced by the
-[Tesseract installation documentation](https://tesseract-ocr.github.io/tessdoc/Installation.html),
-ensure the English language data is installed, and verify it with:
+MedInsight is intended for organizing and explaining laboratory data for educational and personal-record purposes. It is not a diagnostic system and does not replace professional medical advice, diagnosis, treatment, or emergency care.
 
-```powershell
-tesseract --version
-```
+## Project status
 
-If the executable is not on `PATH`, configure its full path for the backend
-process without committing the machine-specific value:
-
-```powershell
-$env:MEDINSIGHT_TESSERACT_CMD="C:\Program Files\Tesseract-OCR\tesseract.exe"
-```
-
-If OCR is required but unavailable, report processing returns HTTP 503.
-Unreadable/corrupt PDFs, OCR runtime failures, and scans over the page limit
-return HTTP 422. `requires_ocr` continues to describe the source PDF; the
-additive `ocr_used` response field reports whether OCR actually ran. Raw PDFs,
-page images, and full extracted/OCR text are not persisted. OCR quality depends
-on scan resolution, orientation, contrast, layout, and installed language data;
-it does not imply diagnostic accuracy.
-
-## Deterministic biomarker extraction
-
-MedInsight uses format-tolerant deterministic extraction for common laboratory
-report layouts and preserves source evidence for every extracted measurement.
-The parser recognizes a curated vocabulary of 36 common biomarkers through
-explicit aliases, then handles common single-line, whitespace/pipe table,
-dot-leader, and short multi-line layouts. It supports decimal points and decimal
-commas, carefully constrained thousands grouping, common laboratory units, and
-report-supplied ranges or comparison thresholds.
-
-Units are normalized only when their spelling is safely equivalent; values are
-not converted between units. A measurement without a usable printed reference
-is retained with an `unknown` status. Missing units, ambiguous numbers, unknown
-analytes, and uncertain layouts are rejected instead of guessed. This bounded
-parser improves coverage of common formats but does not claim to support every
-laboratory, analyte, or report layout. Not every possible laboratory format or
-analyte is guaranteed to be recognized.
-
-## AI biomarker explanations
-
-MedInsight can generate a compact educational explanation for one saved
-biomarker through `POST /biomarkers/{normalized_name}/explain`. The deterministic
-parser, report-provided reference data, status classification, dates, and trend
-engine remain the source of truth. The AI receives only an allowlisted structured
-payload for that biomarker; it does not receive the filename, report ID,
-`source_text`, extracted report text, OCR images, or raw PDF bytes, and it does
-not calculate status or reference ranges.
-
-The backend uses Groq's OpenAI-compatible Responses API through the existing
-OpenAI Python SDK, with validated structured output. Configure the server
-process—not the Expo client—with:
-
-```powershell
-$env:GROQ_API_KEY="your-server-side-key"
-$env:MEDINSIGHT_AI_MODEL="openai/gpt-oss-20b"
-```
-
-`MEDINSIGHT_AI_MODEL` defaults to `openai/gpt-oss-20b`. If `GROQ_API_KEY` is absent, all
-deterministic features remain available and only the explanation endpoint
-returns HTTP 503. Never place the key in an `EXPO_PUBLIC_*` variable or commit it
-to an environment file.
-
-Explanation requests use Groq's supported `store=False` value, and MedInsight
-does not persist prompts, responses, or token usage in its database or client
-storage. Groq documents that inference data is not retained by default, except
-for limited system-reliability or abuse-monitoring circumstances; account-level
-[data controls](https://console.groq.com/docs/your-data) remain the authoritative
-setting. AI explanation history is user-scoped before any provider call is made.
-
-AI explanations are educational, not diagnostic, and do not provide treatment
-or medication advice. Generative responses can contain errors and should be
-interpreted with the user's overall medical history and a healthcare
-professional. This first version combines the structured result with cautious
-general model knowledge; curated internal reference notes are a possible later
-grounding enhancement. The implementation uses the
-[Groq Responses API structured-output interface](https://console.groq.com/docs/responses-api)
-and does not provide chat, report-wide reasoning, web browsing, agents, or a
-vector database.
-
-## Doctor Visit Brief
-
-`GET /dashboard/doctor-brief` generates a concise appointment-preparation brief
-on demand from the current persisted structured lab record. It includes up to
-five recent reports, each biomarker's latest measurement, latest results outside
-their report-provided range, comparable deterministic changes over time,
-measurements without usable reference information, and up to five factual
-questions to discuss with a healthcare professional.
-
-The brief does not use AI, diagnose conditions, assign severity, invent
-reference ranges, or recommend treatments or medication changes. It excludes
-filenames, source text, PDF/OCR content, and AI explanation history. Briefs and
-generated questions are not persisted. The brief is assembled exclusively from
-the authenticated user's saved reports.
+The web application and production backend are deployed and functional. Current work is focused on deployment polish, public account-email delivery, final portfolio documentation, and future installable client builds.
