@@ -5,7 +5,7 @@ from .provider import (
     AIInvalidResponseError,
     AIProviderError,
     AIProviderTimeoutError,
-    OpenAIExplanationProvider,
+    GroqExplanationProvider,
     get_explanation_provider,
 )
 
@@ -16,7 +16,7 @@ __all__ = [
     "AIProviderTimeoutError",
     "BiomarkerExplanation",
     "BiomarkerExplanationContext",
-    "OpenAIExplanationProvider",
+    "GroqExplanationProvider",
     "build_biomarker_explanation_context",
     "get_explanation_provider",
 ]

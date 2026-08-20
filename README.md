@@ -21,7 +21,7 @@ python -m uvicorn backend.app.main:app --host 0.0.0.0 --port "$PORT"
 Production requires a PostgreSQL `DATABASE_URL`, `SUPABASE_URL`, and an explicit
 comma-separated `MEDINSIGHT_CORS_ORIGINS` allowlist for browser clients.
 `SUPABASE_JWT_AUDIENCE` defaults to `authenticated`. AI explanations optionally
-use server-only `OPENAI_API_KEY` and `MEDINSIGHT_AI_MODEL` values.
+use server-only `GROQ_API_KEY` and `MEDINSIGHT_AI_MODEL` values.
 
 OCR requires the Linux system packages `tesseract-ocr` and
 `tesseract-ocr-eng`. The executable is resolved from `PATH` by default;
@@ -171,24 +171,26 @@ payload for that biomarker; it does not receive the filename, report ID,
 `source_text`, extracted report text, OCR images, or raw PDF bytes, and it does
 not calculate status or reference ranges.
 
-The backend uses the official OpenAI Python SDK and Responses API with validated
-structured output. Configure the server process—not the Expo client—with:
+The backend uses Groq's OpenAI-compatible Responses API through the existing
+OpenAI Python SDK, with validated structured output. Configure the server
+process—not the Expo client—with:
 
 ```powershell
-$env:OPENAI_API_KEY="your-server-side-key"
-$env:MEDINSIGHT_AI_MODEL="gpt-5.6"
+$env:GROQ_API_KEY="your-server-side-key"
+$env:MEDINSIGHT_AI_MODEL="openai/gpt-oss-20b"
 ```
 
-`MEDINSIGHT_AI_MODEL` defaults to `gpt-5.6`. If `OPENAI_API_KEY` is absent, all
+`MEDINSIGHT_AI_MODEL` defaults to `openai/gpt-oss-20b`. If `GROQ_API_KEY` is absent, all
 deterministic features remain available and only the explanation endpoint
 returns HTTP 503. Never place the key in an `EXPO_PUBLIC_*` variable or commit it
 to an environment file.
 
-Explanation requests use `store=False`, and MedInsight does not persist prompts,
-responses, or token usage in its database or client storage. This setting does
-not imply zero retention: OpenAI still processes request data under its
-[API data controls and retention policies](https://developers.openai.com/api/docs/guides/your-data).
-AI explanation history is user-scoped before any provider call is made.
+Explanation requests use Groq's supported `store=False` value, and MedInsight
+does not persist prompts, responses, or token usage in its database or client
+storage. Groq documents that inference data is not retained by default, except
+for limited system-reliability or abuse-monitoring circumstances; account-level
+[data controls](https://console.groq.com/docs/your-data) remain the authoritative
+setting. AI explanation history is user-scoped before any provider call is made.
 
 AI explanations are educational, not diagnostic, and do not provide treatment
 or medication advice. Generative responses can contain errors and should be
@@ -196,7 +198,7 @@ interpreted with the user's overall medical history and a healthcare
 professional. This first version combines the structured result with cautious
 general model knowledge; curated internal reference notes are a possible later
 grounding enhancement. The implementation uses the
-[Responses API structured-output interface](https://developers.openai.com/api/docs/guides/structured-outputs)
+[Groq Responses API structured-output interface](https://console.groq.com/docs/responses-api)
 and does not provide chat, report-wide reasoning, web browsing, agents, or a
 vector database.
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import openai
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
@@ -15,18 +16,24 @@ from backend.app.ai_explanations import (
     AIConfigurationError,
     AIInvalidResponseError,
     AIProviderError,
+    AIProviderTimeoutError,
     BiomarkerExplanation,
-    OpenAIExplanationProvider,
+    GroqExplanationProvider,
     build_biomarker_explanation_context,
     get_explanation_provider,
 )
-from backend.app.ai_explanations.provider import AISettings
+from backend.app.ai_explanations.provider import (
+    AISettings,
+    DEFAULT_AI_MODEL,
+    GROQ_BASE_URL,
+    get_ai_settings,
+)
 from backend.app.api.routes.biomarkers import explain_biomarker, router
 from backend.app.biomarkers.vocabulary import BIOMARKERS_BY_NORMALIZED_NAME
 from backend.app.db import Base, BiomarkerHistoryRecord, BiomarkerResult, Report
 from backend.app.db import create_database_engine, get_biomarker_history, get_db_session
 from backend.app.auth import get_current_user
-from backend.tests.auth_helpers import USER_A, USER_A_ID
+from backend.tests.auth_helpers import USER_A, USER_A_ID, USER_B
 from backend.app.trends import calculate_trend
 
 
@@ -79,18 +86,21 @@ class FailingProvider:
 
 
 class FakeResponses:
-    def __init__(self, output_parsed) -> None:
+    def __init__(self, output_parsed=None, error: Exception | None = None) -> None:
         self.output_parsed = output_parsed
+        self.error = error
         self.kwargs = None
 
     def parse(self, **kwargs):
         self.kwargs = kwargs
+        if self.error is not None:
+            raise self.error
         return SimpleNamespace(output_parsed=self.output_parsed)
 
 
 class FakeClient:
-    def __init__(self, output_parsed) -> None:
-        self.responses = FakeResponses(output_parsed)
+    def __init__(self, output_parsed=None, error: Exception | None = None) -> None:
+        self.responses = FakeResponses(output_parsed, error)
 
 
 class ExplanationContextTests(unittest.TestCase):
@@ -158,8 +168,8 @@ class ExplanationContextTests(unittest.TestCase):
         self.assertEqual(context.baseline_unit, "mg/dL")
 
 
-class OpenAIProviderTests(unittest.TestCase):
-    def test_responses_api_uses_structured_output_and_disables_storage(self) -> None:
+class GroqProviderTests(unittest.TestCase):
+    def test_responses_api_uses_groq_structured_output_and_disables_storage(self) -> None:
         fake_client = FakeClient(explanation_payload())
         factory_kwargs = {}
 
@@ -167,7 +177,7 @@ class OpenAIProviderTests(unittest.TestCase):
             factory_kwargs.update(kwargs)
             return fake_client
 
-        provider = OpenAIExplanationProvider(
+        provider = GroqExplanationProvider(
             AISettings(api_key="test-key", model="test-model"), factory
         )
         context = ExplanationContextTests().build_context([history_record()])
@@ -175,6 +185,7 @@ class OpenAIProviderTests(unittest.TestCase):
         result = provider.explain(context)
 
         self.assertIsInstance(result, BiomarkerExplanation)
+        self.assertEqual(factory_kwargs["base_url"], GROQ_BASE_URL)
         self.assertEqual(factory_kwargs["timeout"], 20.0)
         self.assertEqual(factory_kwargs["max_retries"], 1)
         self.assertEqual(fake_client.responses.kwargs["model"], "test-model")
@@ -187,16 +198,30 @@ class OpenAIProviderTests(unittest.TestCase):
         )
         self.assertNotIn("source_text", sent_payload)
         self.assertNotIn("filename", sent_payload)
+        self.assertNotIn("user_id", sent_payload)
+        self.assertNotIn("email", sent_payload)
+
+    def test_default_settings_use_groq_key_and_default_model(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"OPENAI_API_KEY": "ignored-legacy-key"},
+            clear=True,
+        ):
+            settings = get_ai_settings()
+
+        self.assertIsNone(settings.api_key)
+        self.assertEqual(settings.model, "openai/gpt-oss-20b")
+        self.assertEqual(settings.model, DEFAULT_AI_MODEL)
 
     def test_missing_api_key_is_a_configuration_error(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
-            provider = OpenAIExplanationProvider()
+            provider = GroqExplanationProvider()
             context = ExplanationContextTests().build_context([history_record()])
             with self.assertRaises(AIConfigurationError):
                 provider.explain(context)
 
     def test_malformed_structured_output_is_rejected(self) -> None:
-        provider = OpenAIExplanationProvider(
+        provider = GroqExplanationProvider(
             AISettings(api_key="test-key", model="test-model"),
             lambda **kwargs: FakeClient({"summary": "incomplete"}),
         )
@@ -204,6 +229,51 @@ class OpenAIProviderTests(unittest.TestCase):
 
         with self.assertRaises(AIInvalidResponseError):
             provider.explain(context)
+
+    def test_structured_output_parse_failure_is_rejected(self) -> None:
+        provider = GroqExplanationProvider(
+            AISettings(api_key="test-key", model="test-model"),
+            lambda **kwargs: FakeClient(
+                error=json.JSONDecodeError("Invalid structured output", "{", 0)
+            ),
+        )
+        context = ExplanationContextTests().build_context([history_record()])
+
+        with self.assertRaises(AIInvalidResponseError):
+            provider.explain(context)
+
+    def test_timeout_is_sanitized_to_provider_timeout_error(self) -> None:
+        class SyntheticTimeoutError(Exception):
+            pass
+
+        provider = GroqExplanationProvider(
+            AISettings(api_key="test-key", model="test-model"),
+            lambda **kwargs: FakeClient(error=SyntheticTimeoutError()),
+        )
+        context = ExplanationContextTests().build_context([history_record()])
+
+        with patch.object(openai, "APITimeoutError", SyntheticTimeoutError):
+            with self.assertRaises(AIProviderTimeoutError):
+                provider.explain(context)
+
+    def test_authentication_rate_limit_and_network_errors_are_sanitized(self) -> None:
+        class SyntheticProviderError(Exception):
+            pass
+
+        context = ExplanationContextTests().build_context([history_record()])
+        for exception_name in (
+            "AuthenticationError",
+            "RateLimitError",
+            "APIConnectionError",
+        ):
+            with self.subTest(exception_name=exception_name):
+                provider = GroqExplanationProvider(
+                    AISettings(api_key="test-key", model="test-model"),
+                    lambda **kwargs: FakeClient(error=SyntheticProviderError()),
+                )
+                with patch.object(openai, exception_name, SyntheticProviderError):
+                    with self.assertRaises(AIProviderError):
+                        provider.explain(context)
 
 
 class ExplanationEndpointTests(unittest.TestCase):
@@ -284,6 +354,33 @@ class ExplanationEndpointTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 503)
         self.assertNotIn("OpenAI", raised.exception.detail)
+        self.assertNotIn("Groq", raised.exception.detail)
+
+    def test_missing_groq_key_returns_sanitized_503(self) -> None:
+        self.save_glucose()
+        api = FastAPI()
+        api.include_router(router)
+        api.dependency_overrides[get_db_session] = lambda: self.session
+        api.dependency_overrides[get_current_user] = lambda: USER_A
+
+        with patch.dict(os.environ, {}, clear=True):
+            response = TestClient(api).post("/biomarkers/glucose/explain")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json()["detail"],
+            "AI explanations are not configured on this server.",
+        )
+
+    def test_ownership_is_checked_before_provider_call(self) -> None:
+        self.save_glucose()
+        provider = CapturingProvider()
+
+        with self.assertRaises(HTTPException) as raised:
+            explain_biomarker("glucose", self.session, provider, USER_B)
+
+        self.assertEqual(raised.exception.status_code, 404)
+        self.assertIsNone(provider.context)
 
     def test_unsupported_biomarker_and_missing_history_return_404(self) -> None:
         provider = CapturingProvider()
@@ -301,13 +398,13 @@ class ExplanationEndpointTests(unittest.TestCase):
 
 
 @unittest.skipUnless(
-    os.getenv("OPENAI_API_KEY") and os.getenv("MEDINSIGHT_RUN_OPENAI_INTEGRATION") == "1",
-    "Set OPENAI_API_KEY and MEDINSIGHT_RUN_OPENAI_INTEGRATION=1 for the optional smoke test.",
+    os.getenv("GROQ_API_KEY") and os.getenv("MEDINSIGHT_RUN_GROQ_INTEGRATION") == "1",
+    "Set GROQ_API_KEY and MEDINSIGHT_RUN_GROQ_INTEGRATION=1 for the optional smoke test.",
 )
-class OptionalOpenAIIntegrationTests(unittest.TestCase):
+class OptionalGroqIntegrationTests(unittest.TestCase):
     def test_synthetic_explanation_matches_schema_and_avoids_diagnosis_wording(self) -> None:
         context = ExplanationContextTests().build_context([history_record()])
-        response = OpenAIExplanationProvider().explain(context)
+        response = GroqExplanationProvider().explain(context)
         payload = response.model_dump()
 
         self.assertEqual(set(payload), set(BiomarkerExplanation.model_fields))

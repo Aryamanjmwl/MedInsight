@@ -11,7 +11,8 @@ from pydantic import ValidationError
 from .models import BiomarkerExplanation, BiomarkerExplanationContext
 from .prompt import EXPLANATION_INSTRUCTIONS
 
-DEFAULT_AI_MODEL = "gpt-5.6"
+GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+DEFAULT_AI_MODEL = "openai/gpt-oss-20b"
 AI_TIMEOUT_SECONDS = 20.0
 AI_MAX_RETRIES = 1
 AI_MAX_OUTPUT_TOKENS = 900
@@ -45,12 +46,12 @@ class AISettings:
 
 
 def get_ai_settings() -> AISettings:
-    key = os.getenv("OPENAI_API_KEY", "").strip() or None
+    key = os.getenv("GROQ_API_KEY", "").strip() or None
     model = os.getenv("MEDINSIGHT_AI_MODEL", DEFAULT_AI_MODEL).strip()
     return AISettings(api_key=key, model=model or DEFAULT_AI_MODEL)
 
 
-class OpenAIExplanationProvider:
+class GroqExplanationProvider:
     def __init__(
         self,
         settings: AISettings | None = None,
@@ -65,6 +66,7 @@ class OpenAIExplanationProvider:
 
         client = self.client_factory(
             api_key=self.settings.api_key,
+            base_url=GROQ_BASE_URL,
             timeout=AI_TIMEOUT_SECONDS,
             max_retries=AI_MAX_RETRIES,
         )
@@ -84,6 +86,8 @@ class OpenAIExplanationProvider:
             )
         except openai.APITimeoutError as error:
             raise AIProviderTimeoutError from error
+        except (ValidationError, json.JSONDecodeError) as error:
+            raise AIInvalidResponseError from error
         except (
             openai.AuthenticationError,
             openai.PermissionDeniedError,
@@ -105,4 +109,4 @@ class OpenAIExplanationProvider:
 
 
 def get_explanation_provider() -> ExplanationProvider:
-    return cast(ExplanationProvider, OpenAIExplanationProvider())
+    return cast(ExplanationProvider, GroqExplanationProvider())
