@@ -45,7 +45,17 @@ uploads/
 data/private/
 reports/
 
-# Secrets
+# Credentials and signing material
 *.pem
 *.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+.npmrc
+.pypirc
+credentials.json
+service-account*.json
 secrets.toml

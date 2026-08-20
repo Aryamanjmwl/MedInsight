@@ -9,7 +9,6 @@
     "scheme": "medinsight",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon",
       "supportsTablet": true,
       "bundleIdentifier": "com.medinsight.mobile"
     },
