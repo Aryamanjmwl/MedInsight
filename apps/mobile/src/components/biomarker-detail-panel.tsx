@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
 
-import { ApiError, deleteManualMeasurement, explainBiomarker, type BiomarkerExplanation, type BiomarkerHistoryItem, type BiomarkerHistoryResponse, type BiomarkerOverview, type TrendResult } from '@/api';
+import { ApiError, deleteSavedMeasurement, explainBiomarker, type BiomarkerExplanation, type BiomarkerHistoryItem, type BiomarkerHistoryResponse, type BiomarkerOverview, type TrendResult } from '@/api';
 import { AppText } from '@/components/app-text';
 import { BiomarkerExplanationPanel } from '@/components/biomarker-explanation-panel';
 import { ManualMeasurementEditDialog } from '@/components/manual-measurement-edit-dialog';
@@ -49,14 +49,14 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      await deleteManualMeasurement(pendingDelete.measurement_id);
+      await deleteSavedMeasurement(pendingDelete.measurement_id);
       setPendingDelete(null);
       invalidateHealthData();
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         setDeleteError('Your session has expired. Please sign in again.');
       } else if (requestError instanceof ApiError && requestError.status === 404) {
-        setDeleteError('This manual measurement is no longer available.');
+        setDeleteError('This measurement is no longer available.');
       } else if (requestError instanceof ApiError) {
         setDeleteError(requestError.message);
       } else {
@@ -188,36 +188,36 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
         {history.history.length ? history.history.map((item) => {
           const itemStatusColor = getStatusColor(item.status);
           const reference = formatReference(item);
+          const sourceLabel = item.source === 'manual' ? 'Manual entry' : 'Laboratory report';
           return (
             <View key={item.measurement_id} style={[styles.historyRow, isCompact && styles.compactHistoryRow]}>
               <View style={styles.historyContext}>
                 <AppText variant="label">{formatFullDate(item.uploaded_at)}</AppText>
-                <AppText variant="caption" color="textMuted">{item.source === 'manual' ? 'Manual entry' : 'Laboratory report'} · {reference ? `${item.source === 'manual' ? 'Entered reference' : 'Report reference'} ${reference}` : 'Reference unavailable'}</AppText>
+                <AppText variant="caption" color="textMuted">{sourceLabel} · {reference ? `${item.source === 'manual' ? 'Entered reference' : 'Report reference'} ${reference}` : 'Reference unavailable'}</AppText>
+                {item.user_edited ? <AppText variant="metadata" color="brand">USER CORRECTED</AppText> : null}
               </View>
               <View style={[styles.historyValue, isCompact && styles.compactHistoryValue]}>
                 <AppText variant="bodyStrong" style={styles.numeric}>{formatValue(item.value)} <AppText variant="caption" color="textMuted">{item.unit}</AppText></AppText>
                 <AppText variant="metadata" style={{ color: itemStatusColor }}>{getBiomarkerStatusLabel(item.status, item.source)}</AppText>
-                {item.source === 'manual' ? (
-                  <View style={styles.measurementActions}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Edit ${biomarker.test_name} measurement from ${formatFullDate(item.uploaded_at)}`}
-                      onPress={() => setEditingMeasurement(item)}
-                      style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
-                      <AppText variant="caption" color="brand">Edit</AppText>
-                    </Pressable>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Delete ${biomarker.test_name} measurement from ${formatFullDate(item.uploaded_at)}`}
-                      onPress={() => {
-                        setDeleteError(null);
-                        setPendingDelete(item);
-                      }}
-                      style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
-                      <AppText variant="caption" color="textMuted">Delete</AppText>
-                    </Pressable>
-                  </View>
-                ) : null}
+                <View style={styles.measurementActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${biomarker.test_name} measurement from ${formatFullDate(item.uploaded_at)}`}
+                    onPress={() => setEditingMeasurement(item)}
+                    style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
+                    <AppText variant="caption" color="brand">Edit</AppText>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${biomarker.test_name} measurement from ${formatFullDate(item.uploaded_at)}`}
+                    onPress={() => {
+                      setDeleteError(null);
+                      setPendingDelete(item);
+                    }}
+                    style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
+                    <AppText variant="caption" color="statusHigh">Delete</AppText>
+                  </Pressable>
+                </View>
               </View>
             </View>
           );
@@ -243,7 +243,11 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
           <View accessibilityViewIsModal style={styles.confirmDialog}>
             <View style={styles.confirmCopy}>
               <AppText variant="section">Delete measurement</AppText>
-              <AppText color="textSecondary">Delete this manually entered measurement? This cannot be undone.</AppText>
+              <AppText color="textSecondary">
+                {pendingDelete?.source === 'report'
+                  ? 'Delete this structured measurement from the saved report? The rest of the report will remain. This cannot be undone.'
+                  : 'Delete this manually entered measurement? This cannot be undone.'}
+              </AppText>
               {deleteError ? <AppText variant="caption" color="statusHigh">{deleteError}</AppText> : null}
             </View>
             <View style={styles.confirmActions}>
@@ -283,7 +287,7 @@ const styles = StyleSheet.create({
   historySection: { gap: spacing.md }, historyHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   historyRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   compactHistoryRow: { alignItems: 'flex-start', flexDirection: 'column', gap: spacing.sm }, historyContext: { flex: 1, minWidth: 180, gap: spacing.xxs },
-  historyValue: { alignItems: 'flex-end', gap: spacing.xs }, compactHistoryValue: { width: '100%', alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
+  historyValue: { alignItems: 'flex-end', gap: spacing.xs }, compactHistoryValue: { width: '100%', alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' },
   measurementActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   noHistory: { paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   confirmBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(24, 36, 45, 0.42)' },

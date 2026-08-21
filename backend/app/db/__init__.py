@@ -11,15 +11,19 @@ from .service import (
     RecentManualMeasurementRecord,
     ReportStatistics,
     delete_manual_measurement,
+    delete_saved_measurement,
+    delete_saved_report,
     get_biomarker_history,
     get_report_statistics,
     get_saved_report,
     list_biomarker_overviews,
     list_recent_manual_measurements,
     list_saved_reports,
+    rename_saved_report,
     save_processed_report,
     save_manual_measurement,
     update_manual_measurement,
+    update_saved_measurement,
 )
 
 __all__ = [
@@ -32,6 +36,8 @@ __all__ = [
     "ReportStatistics",
     "create_database_engine",
     "delete_manual_measurement",
+    "delete_saved_measurement",
+    "delete_saved_report",
     "get_db_session",
     "get_biomarker_history",
     "get_report_statistics",
@@ -40,7 +46,9 @@ __all__ = [
     "list_biomarker_overviews",
     "list_recent_manual_measurements",
     "list_saved_reports",
+    "rename_saved_report",
     "save_processed_report",
     "save_manual_measurement",
     "update_manual_measurement",
+    "update_saved_measurement",
 ]

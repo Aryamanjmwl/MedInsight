@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from ...auth import AuthenticatedUser, get_current_user
@@ -22,15 +22,19 @@ from ...document_processing import (
 from ...db import (
     BiomarkerResult,
     Report,
+    delete_saved_report,
     get_db_session,
     get_saved_report,
     list_saved_reports,
+    rename_saved_report,
     save_processed_report,
 )
 from ...security import (
+    ACCOUNT_DATA_DELETE_RULE,
     REPORT_PROCESS_RULE,
     REPORT_UPLOAD_RULE,
     enforce_user_rate_limit,
+    log_security_event,
 )
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -89,6 +93,26 @@ class SavedReportSummary(BaseModel):
 
 class SavedReportDetail(SavedReportSummary):
     biomarkers: list[Biomarker]
+
+
+class ReportRenameRequest(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+
+    @field_validator("filename")
+    @classmethod
+    def validate_filename(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Report name cannot be empty.")
+        if any(character in cleaned for character in ("/", "\\", "\x00")):
+            raise ValueError("Report name cannot contain path separators.")
+        return cleaned
+
+
+class ReportDeleteResponse(BaseModel):
+    report_id: int
+    measurements_deleted: int
+    status: Literal["deleted"] = "deleted"
 
 
 async def _read_pdf_upload(file: UploadFile) -> tuple[str, bytes]:
@@ -311,4 +335,54 @@ def get_report(
     return SavedReportDetail(
         **_report_summary(report).model_dump(),
         biomarkers=[_stored_biomarker(item) for item in report.biomarkers],
+    )
+
+
+@router.put("/{report_id}", response_model=SavedReportSummary)
+def rename_report(
+    report_id: int,
+    payload: ReportRenameRequest,
+    session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> SavedReportSummary:
+    report = rename_saved_report(
+        session,
+        user_id=current_user.id,
+        report_id=report_id,
+        filename=payload.filename,
+    )
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not found.",
+        )
+    log_security_event("report_rename", user_id=current_user.id)
+    return _report_summary(report)
+
+
+@router.delete("/{report_id}", response_model=ReportDeleteResponse)
+def delete_report(
+    report_id: int,
+    session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> ReportDeleteResponse:
+    enforce_user_rate_limit(
+        user_id=current_user.id,
+        scope="report_delete",
+        rule=ACCOUNT_DATA_DELETE_RULE,
+    )
+    measurements_deleted = delete_saved_report(
+        session,
+        user_id=current_user.id,
+        report_id=report_id,
+    )
+    if measurements_deleted is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not found.",
+        )
+    log_security_event("report_delete", user_id=current_user.id)
+    return ReportDeleteResponse(
+        report_id=report_id,
+        measurements_deleted=measurements_deleted,
     )

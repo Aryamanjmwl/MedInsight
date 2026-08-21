@@ -73,11 +73,10 @@ class ManualMeasurementCreate(ManualMeasurementValues):
 
 
 class ManualMeasurementUpdate(ManualMeasurementValues):
-    """Editable fields for an existing manual measurement.
+    """Editable fields for an existing saved measurement.
 
-    The biomarker identity is intentionally immutable. Changing the analyte would
-    alter longitudinal provenance; users can delete and re-add the measurement if
-    the wrong biomarker was selected.
+    The biomarker identity is intentionally immutable. A manual entry may also
+    change its date; for report-derived rows the report date remains authoritative.
     """
 
 
@@ -94,6 +93,7 @@ class ManualMeasurementResponse(BaseModel):
     raw_reference: str
     status: BiomarkerStatus
     source: MeasurementSource
+    user_edited: bool = False
 
 
 class ManualMeasurementDeleteResponse(BaseModel):
