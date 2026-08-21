@@ -8,6 +8,7 @@ from .api.routes.dashboard import router as dashboard_router
 from .api.routes.reports import router as reports_router
 from .cors import configure_cors
 from .db import initialize_database
+from .security import configure_security_headers
 
 
 @asynccontextmanager
@@ -23,6 +24,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 configure_cors(app)
+configure_security_headers(app)
 
 app.include_router(reports_router)
 app.include_router(biomarkers_router)
