@@ -33,6 +33,16 @@ export interface SavedReportDetail extends SavedReportSummary {
   biomarkers: BiomarkerResult[];
 }
 
+export interface ReportRenameRequest {
+  filename: string;
+}
+
+export interface ReportDeleteResponse {
+  report_id: number;
+  measurements_deleted: number;
+  status: 'deleted';
+}
+
 export interface ReportProcessingResult {
   filename: string;
   page_count: number;
@@ -72,6 +82,7 @@ export interface BiomarkerHistoryItem {
   reference_high: number | null;
   reference_operator: ReferenceOperator | null;
   raw_reference: string;
+  user_edited: boolean;
 }
 
 export interface BiomarkerHistoryResponse {
@@ -188,7 +199,8 @@ export interface ManualMeasurementResponse {
   reference_operator: ReferenceOperator | null;
   raw_reference: string;
   status: BiomarkerStatus;
-  source: 'manual';
+  source: MeasurementSource;
+  user_edited: boolean;
 }
 
 export interface ManualMeasurementDeleteResponse {
