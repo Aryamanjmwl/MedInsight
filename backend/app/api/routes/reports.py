@@ -27,6 +27,11 @@ from ...db import (
     list_saved_reports,
     save_processed_report,
 )
+from ...security import (
+    REPORT_PROCESS_RULE,
+    REPORT_UPLOAD_RULE,
+    enforce_user_rate_limit,
+)
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -139,6 +144,11 @@ async def upload_report(
     file: UploadFile,
     current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> ReportUploadResponse:
+    enforce_user_rate_limit(
+        user_id=current_user.id,
+        scope="report_upload",
+        rule=REPORT_UPLOAD_RULE,
+    )
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -174,6 +184,11 @@ async def extract_report(
     file: UploadFile,
     current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> ReportExtractionResponse:
+    enforce_user_rate_limit(
+        user_id=current_user.id,
+        scope="report_process",
+        rule=REPORT_PROCESS_RULE,
+    )
     filename, pdf_bytes = await _read_pdf_upload(file)
     extraction = _extract_pdf_or_http_error(pdf_bytes)
 
@@ -201,6 +216,11 @@ async def process_report(
     file: UploadFile,
     current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> ReportProcessingResponse:
+    enforce_user_rate_limit(
+        user_id=current_user.id,
+        scope="report_process",
+        rule=REPORT_PROCESS_RULE,
+    )
     filename, pdf_bytes = await _read_pdf_upload(file)
     extraction = _extract_pdf_or_http_error(pdf_bytes)
 

@@ -33,6 +33,11 @@ from ...db import (
     list_biomarker_overviews,
     save_manual_measurement,
 )
+from ...security import (
+    AI_EXPLANATION_RULE,
+    enforce_user_rate_limit,
+    log_security_event,
+)
 from ...trends import TrendResult, calculate_trend
 
 router = APIRouter(prefix="/biomarkers", tags=["biomarkers"])
@@ -221,6 +226,12 @@ def explain_biomarker(
     provider: ExplanationProvider = Depends(get_explanation_provider),
     current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> BiomarkerExplanation:
+    enforce_user_rate_limit(
+        user_id=current_user.id,
+        scope="ai_explanation",
+        rule=AI_EXPLANATION_RULE,
+    )
+
     definition = BIOMARKERS_BY_NORMALIZED_NAME.get(normalized_name)
     if definition is None:
         raise HTTPException(
@@ -238,24 +249,51 @@ def explain_biomarker(
     trend = calculate_trend(normalized_name, records)
     context = build_biomarker_explanation_context(definition, records, trend)
     try:
-        return provider.explain(context)
+        result = provider.explain(context)
     except AIConfigurationError as error:
+        log_security_event(
+            "ai_explanation",
+            user_id=current_user.id,
+            outcome="failure",
+            reason="provider_not_configured",
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI explanations are not configured on this server.",
         ) from error
     except AIProviderTimeoutError as error:
+        log_security_event(
+            "ai_explanation",
+            user_id=current_user.id,
+            outcome="failure",
+            reason="provider_timeout",
+        )
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail="The AI explanation service timed out. Please try again.",
         ) from error
     except AIInvalidResponseError as error:
+        log_security_event(
+            "ai_explanation",
+            user_id=current_user.id,
+            outcome="failure",
+            reason="invalid_provider_response",
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="The AI explanation service returned an invalid response.",
         ) from error
     except AIProviderError as error:
+        log_security_event(
+            "ai_explanation",
+            user_id=current_user.id,
+            outcome="failure",
+            reason="provider_unavailable",
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="The AI explanation service is temporarily unavailable.",
         ) from error
+
+    log_security_event("ai_explanation", user_id=current_user.id)
+    return result
