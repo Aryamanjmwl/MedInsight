@@ -29,13 +29,16 @@ from ...ai_explanations import (
 from ...ai_explanations.provider import ExplanationProvider
 from ...db import (
     delete_manual_measurement,
+    delete_saved_measurement,
     get_biomarker_history,
     get_db_session,
     list_biomarker_overviews,
     save_manual_measurement,
     update_manual_measurement,
+    update_saved_measurement,
 )
 from ...security import (
+    ACCOUNT_DATA_DELETE_RULE,
     AI_EXPLANATION_RULE,
     enforce_user_rate_limit,
     log_security_event,
@@ -57,6 +60,7 @@ class BiomarkerHistoryItem(BaseModel):
     reference_high: float | None
     reference_operator: ReferenceOperator | None
     raw_reference: str
+    user_edited: bool = False
 
 
 class BiomarkerHistoryResponse(BaseModel):
@@ -91,7 +95,7 @@ def _validated_manual_unit(unit: str) -> str:
     return normalized
 
 
-def _manual_measurement_response(measurement) -> ManualMeasurementResponse:
+def _measurement_response(measurement) -> ManualMeasurementResponse:
     return ManualMeasurementResponse(
         measurement_id=measurement.id,
         normalized_name=measurement.normalized_name,
@@ -105,6 +109,7 @@ def _manual_measurement_response(measurement) -> ManualMeasurementResponse:
         raw_reference=measurement.raw_reference,
         status=measurement.status,
         source=measurement.source,
+        user_edited=measurement.user_edited,
     )
 
 
@@ -170,7 +175,7 @@ def create_manual_measurement(
         raw_reference=format_manual_reference(payload),
         status=calculated_status,
     )
-    return _manual_measurement_response(measurement)
+    return _measurement_response(measurement)
 
 
 @router.put(
@@ -210,7 +215,7 @@ def edit_manual_measurement(
         )
 
     log_security_event("manual_measurement_update", user_id=current_user.id)
-    return _manual_measurement_response(measurement)
+    return _measurement_response(measurement)
 
 
 @router.delete(
@@ -233,6 +238,74 @@ def remove_manual_measurement(
             detail="Manual measurement not found.",
         )
     log_security_event("manual_measurement_delete", user_id=current_user.id)
+    return ManualMeasurementDeleteResponse(measurement_id=measurement_id)
+
+
+@router.put(
+    "/measurements/{measurement_id}",
+    response_model=ManualMeasurementResponse,
+)
+def edit_saved_measurement(
+    measurement_id: int,
+    payload: ManualMeasurementUpdate,
+    session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> ManualMeasurementResponse:
+    """Correct an owned structured measurement while preserving its source."""
+    unit = _validated_manual_unit(payload.unit)
+    calculated_status = classify_biomarker_value(
+        value=payload.value,
+        reference_low=payload.reference_low,
+        reference_high=payload.reference_high,
+        reference_operator=payload.reference_operator,
+    )
+    measurement = update_saved_measurement(
+        session,
+        user_id=current_user.id,
+        measurement_id=measurement_id,
+        value=payload.value,
+        unit=unit,
+        measured_at=payload.measured_at(),
+        reference_low=payload.reference_low,
+        reference_high=payload.reference_high,
+        reference_operator=payload.reference_operator,
+        raw_reference=format_manual_reference(payload),
+        status=calculated_status,
+    )
+    if measurement is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Measurement not found.",
+        )
+    log_security_event("measurement_update", user_id=current_user.id)
+    return _measurement_response(measurement)
+
+
+@router.delete(
+    "/measurements/{measurement_id}",
+    response_model=ManualMeasurementDeleteResponse,
+)
+def remove_saved_measurement(
+    measurement_id: int,
+    session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> ManualMeasurementDeleteResponse:
+    enforce_user_rate_limit(
+        user_id=current_user.id,
+        scope="measurement_delete",
+        rule=ACCOUNT_DATA_DELETE_RULE,
+    )
+    deleted = delete_saved_measurement(
+        session,
+        user_id=current_user.id,
+        measurement_id=measurement_id,
+    )
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Measurement not found.",
+        )
+    log_security_event("measurement_delete", user_id=current_user.id)
     return ManualMeasurementDeleteResponse(measurement_id=measurement_id)
 
 
