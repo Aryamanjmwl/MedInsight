@@ -9,6 +9,7 @@ from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 from backend.app.api.routes.reports import extract_report, upload_report
 from backend.app.document_processing import OCRExtractionResult
 from backend.app.main import health_check
+from backend.tests.auth_helpers import USER_A
 from backend.tests.test_reports import make_upload
 
 
@@ -64,7 +65,7 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
         text = "Synthetic laboratory report with machine-readable text."
 
         response = await extract_report(
-            make_upload("report.pdf", "application/pdf", make_pdf(text))
+            make_upload("report.pdf", "application/pdf", make_pdf(text)), USER_A
         )
 
         self.assertEqual(response.filename, "report.pdf")
@@ -84,7 +85,8 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
                 "multi-page.pdf",
                 "application/pdf",
                 make_pdf(first_page, second_page),
-            )
+            ),
+            USER_A,
         )
 
         self.assertEqual(response.page_count, 2)
@@ -95,7 +97,7 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
     async def test_corrupted_pdf_is_rejected(self) -> None:
         with self.assertRaises(HTTPException) as context:
             await extract_report(
-                make_upload("corrupted.pdf", "application/pdf", b"not a PDF")
+                make_upload("corrupted.pdf", "application/pdf", b"not a PDF"), USER_A
             )
 
         self.assertEqual(context.exception.status_code, 422)
@@ -103,7 +105,9 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_non_pdf_is_rejected(self) -> None:
         with self.assertRaises(HTTPException) as context:
-            await extract_report(make_upload("report.png", "image/png", b"image"))
+            await extract_report(
+                make_upload("report.png", "image/png", b"image"), USER_A
+            )
 
         self.assertEqual(context.exception.status_code, 415)
         self.assertIn("PDF files are required", context.exception.detail)
@@ -114,7 +118,7 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
             return_value=make_empty_ocr_result(),
         ):
             response = await extract_report(
-                make_upload("scan.pdf", "application/pdf", make_pdf(""))
+                make_upload("scan.pdf", "application/pdf", make_pdf("")), USER_A
             )
 
         self.assertEqual(response.page_count, 1)
@@ -138,7 +142,7 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
             return_value=ocr_result,
         ):
             response = await extract_report(
-                make_upload("scan.pdf", "application/pdf", make_pdf(""))
+                make_upload("scan.pdf", "application/pdf", make_pdf("")), USER_A
             )
 
         self.assertTrue(response.text_extracted)
@@ -150,7 +154,7 @@ class ReportExtractionTests(unittest.IsolatedAsyncioTestCase):
         content = make_pdf("Synthetic report content for upload validation.")
 
         response = await upload_report(
-            make_upload("report.pdf", "application/pdf", content)
+            make_upload("report.pdf", "application/pdf", content), USER_A
         )
 
         self.assertEqual(response.status, "accepted")
