@@ -88,8 +88,8 @@ global_rate_limiter = InMemorySlidingWindowRateLimiter()
 
 # Conservative public-beta limits. These are deliberately scoped to operations
 # that are destructive, expensive, or call an external provider.
-REPORT_UPLOAD_RULE = RateLimitRule(limit=30, window_seconds=15 * 60)
-REPORT_PROCESS_RULE = RateLimitRule(limit=20, window_seconds=15 * 60)
+REPORT_UPLOAD_RULE = RateLimitRule(limit=60, window_seconds=15 * 60)
+REPORT_PROCESS_RULE = RateLimitRule(limit=60, window_seconds=15 * 60)
 AI_EXPLANATION_RULE = RateLimitRule(limit=30, window_seconds=60 * 60)
 ACCOUNT_DATA_DELETE_RULE = RateLimitRule(limit=5, window_seconds=60 * 60)
 ACCOUNT_DELETE_RULE = RateLimitRule(limit=3, window_seconds=60 * 60)
