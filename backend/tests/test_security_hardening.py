@@ -4,7 +4,9 @@ from uuid import UUID
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
+from backend.app.biomarkers import BiomarkerTextRequest
 from backend.app.security.audit import log_security_event
 from backend.app.security.headers import SECURITY_HEADERS, configure_security_headers
 from backend.app.security.rate_limit import (
@@ -85,6 +87,13 @@ class SecurityHeaderTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         for name, expected in SECURITY_HEADERS.items():
             self.assertEqual(response.headers[name], expected)
+
+
+class ParserPayloadLimitTests(unittest.TestCase):
+    def test_raw_parser_payload_is_bounded(self) -> None:
+        BiomarkerTextRequest(text="x" * 2_000_000)
+        with self.assertRaises(ValidationError):
+            BiomarkerTextRequest(text="x" * 2_000_001)
 
 
 if __name__ == "__main__":
