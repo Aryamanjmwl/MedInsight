@@ -3,6 +3,7 @@ import unittest
 from backend.app.api.routes.reports import extract_biomarkers, extract_report
 from backend.app.biomarkers import BiomarkerTextRequest, parse_biomarkers
 from backend.app.main import app, health_check
+from backend.tests.auth_helpers import USER_A
 from backend.tests.test_report_extraction import make_pdf
 from backend.tests.test_reports import make_upload
 
@@ -138,7 +139,7 @@ class ExistingExtractionTests(unittest.IsolatedAsyncioTestCase):
         text = "Synthetic laboratory report with machine-readable text."
 
         response = await extract_report(
-            make_upload("report.pdf", "application/pdf", make_pdf(text))
+            make_upload("report.pdf", "application/pdf", make_pdf(text)), USER_A
         )
 
         self.assertTrue(response.text_extracted)
