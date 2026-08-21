@@ -76,7 +76,7 @@ export default function SettingsScreen() {
     try {
       const { error } = await getSupabaseClient().auth.updateUser({
         password: newPassword,
-        currentPassword,
+        current_password: currentPassword,
       });
       if (error) throw error;
       setPasswordOpen(false);
