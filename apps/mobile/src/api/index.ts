@@ -1,5 +1,5 @@
 export { ApiError } from '@/api/client';
-export { createManualMeasurement, deleteManualMeasurement, explainBiomarker, getBiomarkerHistory, getBiomarkers, getBiomarkerTrend, getSupportedBiomarkers } from '@/api/biomarkers';
+export { createManualMeasurement, deleteManualMeasurement, explainBiomarker, getBiomarkerHistory, getBiomarkers, getBiomarkerTrend, getSupportedBiomarkers, updateManualMeasurement } from '@/api/biomarkers';
 export { getDashboardSummary } from '@/api/dashboard';
 export { getDoctorVisitBrief } from '@/api/doctor-brief';
 export { getReport, getReports, processAndSaveReport } from '@/api/reports';
@@ -33,5 +33,6 @@ export type {
   ManualMeasurementCreate,
   ManualMeasurementDeleteResponse,
   ManualMeasurementResponse,
+  ManualMeasurementUpdate,
   SupportedBiomarker,
 } from '@/api/types';

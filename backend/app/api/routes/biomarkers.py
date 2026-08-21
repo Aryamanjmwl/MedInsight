@@ -10,6 +10,7 @@ from ...biomarkers import (
     ManualMeasurementCreate,
     ManualMeasurementDeleteResponse,
     ManualMeasurementResponse,
+    ManualMeasurementUpdate,
     MeasurementSource,
     classify_biomarker_value,
     format_manual_reference,
@@ -32,6 +33,7 @@ from ...db import (
     get_db_session,
     list_biomarker_overviews,
     save_manual_measurement,
+    update_manual_measurement,
 )
 from ...security import (
     AI_EXPLANATION_RULE,
@@ -79,6 +81,33 @@ class SupportedBiomarker(BaseModel):
     display_name: str
 
 
+def _validated_manual_unit(unit: str) -> str:
+    normalized = normalize_unit(unit)
+    if normalized is None or ("/" not in normalized and normalized not in {"%", "fL", "pg"}):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Enter a valid laboratory unit.",
+        )
+    return normalized
+
+
+def _manual_measurement_response(measurement) -> ManualMeasurementResponse:
+    return ManualMeasurementResponse(
+        measurement_id=measurement.id,
+        normalized_name=measurement.normalized_name,
+        test_name=measurement.test_name,
+        value=measurement.value,
+        unit=measurement.unit,
+        measurement_date=measurement.measured_at,
+        reference_low=measurement.reference_low,
+        reference_high=measurement.reference_high,
+        reference_operator=measurement.reference_operator,
+        raw_reference=measurement.raw_reference,
+        status=measurement.status,
+        source=measurement.source,
+    )
+
+
 @router.get("", response_model=list[BiomarkerOverview])
 def list_biomarkers(
     session: Session = Depends(get_db_session),
@@ -120,13 +149,7 @@ def create_manual_measurement(
             detail="Select a supported laboratory biomarker.",
         )
 
-    unit = normalize_unit(payload.unit)
-    if unit is None or ("/" not in unit and unit not in {"%", "fL", "pg"}):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Enter a valid laboratory unit.",
-        )
-
+    unit = _validated_manual_unit(payload.unit)
     calculated_status = classify_biomarker_value(
         value=payload.value,
         reference_low=payload.reference_low,
@@ -147,20 +170,47 @@ def create_manual_measurement(
         raw_reference=format_manual_reference(payload),
         status=calculated_status,
     )
-    return ManualMeasurementResponse(
-        measurement_id=measurement.id,
-        normalized_name=measurement.normalized_name,
-        test_name=measurement.test_name,
-        value=measurement.value,
-        unit=measurement.unit,
-        measurement_date=measurement.measured_at,
-        reference_low=measurement.reference_low,
-        reference_high=measurement.reference_high,
-        reference_operator=measurement.reference_operator,
-        raw_reference=measurement.raw_reference,
-        status=measurement.status,
-        source=measurement.source,
+    return _manual_measurement_response(measurement)
+
+
+@router.put(
+    "/manual/{measurement_id}",
+    response_model=ManualMeasurementResponse,
+)
+def edit_manual_measurement(
+    measurement_id: int,
+    payload: ManualMeasurementUpdate,
+    session: Session = Depends(get_db_session),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+) -> ManualMeasurementResponse:
+    unit = _validated_manual_unit(payload.unit)
+    calculated_status = classify_biomarker_value(
+        value=payload.value,
+        reference_low=payload.reference_low,
+        reference_high=payload.reference_high,
+        reference_operator=payload.reference_operator,
     )
+    measurement = update_manual_measurement(
+        session,
+        user_id=current_user.id,
+        measurement_id=measurement_id,
+        value=payload.value,
+        unit=unit,
+        measured_at=payload.measured_at(),
+        reference_low=payload.reference_low,
+        reference_high=payload.reference_high,
+        reference_operator=payload.reference_operator,
+        raw_reference=format_manual_reference(payload),
+        status=calculated_status,
+    )
+    if measurement is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Manual measurement not found.",
+        )
+
+    log_security_event("manual_measurement_update", user_id=current_user.id)
+    return _manual_measurement_response(measurement)
 
 
 @router.delete(
@@ -182,6 +232,7 @@ def remove_manual_measurement(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Manual measurement not found.",
         )
+    log_security_event("manual_measurement_delete", user_id=current_user.id)
     return ManualMeasurementDeleteResponse(measurement_id=measurement_id)
 
 

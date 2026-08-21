@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-nat
 import { ApiError, deleteManualMeasurement, explainBiomarker, type BiomarkerExplanation, type BiomarkerHistoryItem, type BiomarkerHistoryResponse, type BiomarkerOverview, type TrendResult } from '@/api';
 import { AppText } from '@/components/app-text';
 import { BiomarkerExplanationPanel } from '@/components/biomarker-explanation-panel';
+import { ManualMeasurementEditDialog } from '@/components/manual-measurement-edit-dialog';
 import { getBiomarkerStatusLabel, getStatusColor } from '@/components/status-utils';
 import { TrendTrack } from '@/components/trend-track';
 import { useHealthDataRefresh } from '@/context/health-data-refresh-context';
@@ -27,6 +28,7 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
   const [explanationLoading, setExplanationLoading] = useState(false);
   const [explanationError, setExplanationError] = useState<ApiError | null>(null);
   const explanationRequestId = useRef(0);
+  const [editingMeasurement, setEditingMeasurement] = useState<BiomarkerHistoryItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<BiomarkerHistoryItem | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -36,6 +38,7 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
     setExplanation(null);
     setExplanationLoading(false);
     setExplanationError(null);
+    setEditingMeasurement(null);
     setPendingDelete(null);
     setDeleteLoading(false);
     setDeleteError(null);
@@ -195,21 +198,39 @@ export function BiomarkerDetailPanel({ biomarker, history, trend, loading, error
                 <AppText variant="bodyStrong" style={styles.numeric}>{formatValue(item.value)} <AppText variant="caption" color="textMuted">{item.unit}</AppText></AppText>
                 <AppText variant="metadata" style={{ color: itemStatusColor }}>{getBiomarkerStatusLabel(item.status, item.source)}</AppText>
                 {item.source === 'manual' ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => {
-                      setDeleteError(null);
-                      setPendingDelete(item);
-                    }}
-                    style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
-                    <AppText variant="caption" color="textMuted">Delete measurement</AppText>
-                  </Pressable>
+                  <View style={styles.measurementActions}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${biomarker.test_name} measurement from ${formatFullDate(item.uploaded_at)}`}
+                      onPress={() => setEditingMeasurement(item)}
+                      style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
+                      <AppText variant="caption" color="brand">Edit</AppText>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${biomarker.test_name} measurement from ${formatFullDate(item.uploaded_at)}`}
+                      onPress={() => {
+                        setDeleteError(null);
+                        setPendingDelete(item);
+                      }}
+                      style={({ pressed, hovered }) => [(pressed || hovered) && styles.active]}>
+                      <AppText variant="caption" color="textMuted">Delete</AppText>
+                    </Pressable>
+                  </View>
                 ) : null}
               </View>
             </View>
           );
         }) : <AppText variant="caption" color="textMuted" style={styles.noHistory}>No stored measurements are available.</AppText>}
       </View>
+
+      <ManualMeasurementEditDialog
+        visible={editingMeasurement !== null}
+        normalizedName={biomarker.normalized_name}
+        biomarkerName={biomarker.test_name}
+        measurement={editingMeasurement}
+        onClose={() => setEditingMeasurement(null)}
+      />
 
       <Modal
         animationType="fade"
@@ -263,6 +284,7 @@ const styles = StyleSheet.create({
   historyRow: { minHeight: 70, flexDirection: 'row', alignItems: 'center', gap: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   compactHistoryRow: { alignItems: 'flex-start', flexDirection: 'column', gap: spacing.sm }, historyContext: { flex: 1, minWidth: 180, gap: spacing.xxs },
   historyValue: { alignItems: 'flex-end', gap: spacing.xs }, compactHistoryValue: { width: '100%', alignItems: 'flex-start', flexDirection: 'row', justifyContent: 'space-between' },
+  measurementActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   noHistory: { paddingVertical: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   confirmBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, backgroundColor: 'rgba(24, 36, 45, 0.42)' },
   confirmDialog: { width: '100%', maxWidth: 440, gap: spacing.lg, padding: spacing.xl, borderTopWidth: 2, borderTopColor: colors.textPrimary, backgroundColor: colors.surface },

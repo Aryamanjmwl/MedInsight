@@ -19,6 +19,7 @@ from .service import (
     list_saved_reports,
     save_processed_report,
     save_manual_measurement,
+    update_manual_measurement,
 )
 
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     "list_saved_reports",
     "save_processed_report",
     "save_manual_measurement",
+    "update_manual_measurement",
 ]

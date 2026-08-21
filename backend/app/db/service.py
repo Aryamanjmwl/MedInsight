@@ -145,6 +145,47 @@ def save_manual_measurement(
     return measurement
 
 
+def update_manual_measurement(
+    session: Session,
+    *,
+    user_id: UUID,
+    measurement_id: int,
+    value: float,
+    unit: str,
+    measured_at: datetime,
+    reference_low: float | None,
+    reference_high: float | None,
+    reference_operator: ReferenceOperator | None,
+    raw_reference: str,
+    status: BiomarkerStatus,
+) -> BiomarkerResult | None:
+    statement = select(BiomarkerResult).where(
+        BiomarkerResult.id == measurement_id,
+        BiomarkerResult.user_id == user_id,
+        BiomarkerResult.source == MeasurementSource.MANUAL.value,
+    )
+    measurement = session.scalar(statement)
+    if measurement is None:
+        return None
+
+    measurement.value = value
+    measurement.unit = unit
+    measurement.measured_at = measured_at
+    measurement.reference_low = reference_low
+    measurement.reference_high = reference_high
+    measurement.reference_operator = reference_operator
+    measurement.raw_reference = raw_reference
+    measurement.status = status.value
+
+    try:
+        session.commit()
+        session.refresh(measurement)
+    except SQLAlchemyError:
+        session.rollback()
+        raise
+    return measurement
+
+
 def delete_manual_measurement(
     session: Session,
     *,

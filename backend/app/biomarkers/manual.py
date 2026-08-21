@@ -7,10 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from .models import BiomarkerStatus, MeasurementSource, ReferenceOperator
 
 
-class ManualMeasurementCreate(BaseModel):
+class ManualMeasurementValues(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    normalized_name: str = Field(min_length=1, max_length=255)
     value: float
     unit: str = Field(min_length=1, max_length=100)
     measurement_date: date
@@ -69,6 +68,19 @@ class ManualMeasurementCreate(BaseModel):
         return datetime.combine(self.measurement_date, time.min, tzinfo=timezone.utc)
 
 
+class ManualMeasurementCreate(ManualMeasurementValues):
+    normalized_name: str = Field(min_length=1, max_length=255)
+
+
+class ManualMeasurementUpdate(ManualMeasurementValues):
+    """Editable fields for an existing manual measurement.
+
+    The biomarker identity is intentionally immutable. Changing the analyte would
+    alter longitudinal provenance; users can delete and re-add the measurement if
+    the wrong biomarker was selected.
+    """
+
+
 class ManualMeasurementResponse(BaseModel):
     measurement_id: int
     normalized_name: str
@@ -89,7 +101,7 @@ class ManualMeasurementDeleteResponse(BaseModel):
     status: Literal["deleted"] = "deleted"
 
 
-def format_manual_reference(payload: ManualMeasurementCreate) -> str:
+def format_manual_reference(payload: ManualMeasurementValues) -> str:
     if payload.reference_operator is None:
         if payload.reference_low is None or payload.reference_high is None:
             return ""
