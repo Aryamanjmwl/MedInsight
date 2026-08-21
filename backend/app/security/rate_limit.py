@@ -8,6 +8,8 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 
+from .audit import log_security_event
+
 
 @dataclass(frozen=True)
 class RateLimitRule:
@@ -102,6 +104,12 @@ def enforce_user_rate_limit(
     try:
         global_rate_limiter.check(scope=scope, key=str(user_id), rule=rule)
     except RateLimitExceeded as error:
+        log_security_event(
+            "rate_limit_exceeded",
+            user_id=user_id,
+            outcome="blocked",
+            reason=scope,
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests for this operation. Please try again later.",
