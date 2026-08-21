@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 ReferenceOperator = Literal["<", "<=", ">", ">="]
 
@@ -34,7 +34,9 @@ class Biomarker(BaseModel):
 
 
 class BiomarkerTextRequest(BaseModel):
-    text: str
+    # This endpoint is an internal deterministic parsing surface. Bound arbitrary
+    # JSON text so authenticated callers cannot submit unbounded parser payloads.
+    text: str = Field(max_length=2_000_000)
 
 
 class BiomarkerParseResult(BaseModel):
