@@ -16,6 +16,7 @@ from backend.app.document_processing import (
     OCRUnavailableError,
 )
 from backend.app.main import app, health_check
+from backend.tests.auth_helpers import USER_A
 from backend.tests.test_report_extraction import make_pdf
 from backend.tests.test_ocr import make_ocr_result
 from backend.tests.test_reports import make_upload
@@ -30,7 +31,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
         )
 
         response = await process_report(
-            make_upload("report.pdf", "application/pdf", pdf_bytes)
+            make_upload("report.pdf", "application/pdf", pdf_bytes), USER_A
         )
 
         self.assertEqual(response.filename, "report.pdf")
@@ -54,7 +55,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
         )
 
         response = await process_report(
-            make_upload("report.pdf", "application/pdf", pdf_bytes)
+            make_upload("report.pdf", "application/pdf", pdf_bytes), USER_A
         )
 
         self.assertEqual(response.biomarker_count, 1)
@@ -66,7 +67,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
             return_value=make_ocr_result(""),
         ):
             response = await process_report(
-                make_upload("scan.pdf", "application/pdf", make_pdf(""))
+                make_upload("scan.pdf", "application/pdf", make_pdf("")), USER_A
             )
 
         self.assertTrue(response.requires_ocr)
@@ -86,7 +87,8 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
             return_value=ocr_result,
         ):
             response = await process_report(
-                make_upload("scan.pdf", "application/pdf", make_pdf("", "", ""))
+                make_upload("scan.pdf", "application/pdf", make_pdf("", "", "")),
+                USER_A,
             )
 
         self.assertTrue(response.requires_ocr)
@@ -104,7 +106,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
         ):
             with self.assertRaises(HTTPException) as context:
                 await process_report(
-                    make_upload("scan.pdf", "application/pdf", make_pdf(""))
+                    make_upload("scan.pdf", "application/pdf", make_pdf("")), USER_A
                 )
 
         self.assertEqual(context.exception.status_code, 503)
@@ -120,7 +122,8 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
                     "text.pdf",
                     "application/pdf",
                     make_pdf("Hemoglobin 13.5 g/dL 12.0 - 15.5"),
-                )
+                ),
+                USER_A,
             )
 
         ocr.assert_not_called()
@@ -134,7 +137,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
         ):
             with self.assertRaises(HTTPException) as context:
                 await process_report(
-                    make_upload("scan.pdf", "application/pdf", make_pdf(""))
+                    make_upload("scan.pdf", "application/pdf", make_pdf("")), USER_A
                 )
 
         self.assertEqual(context.exception.status_code, 422)
@@ -149,14 +152,15 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
             "Creatinine 0.84 mg/dL 0.60 - 1.10",
         )
         direct = await process_report(
-            make_upload("text.pdf", "application/pdf", make_pdf(*page_texts))
+            make_upload("text.pdf", "application/pdf", make_pdf(*page_texts)), USER_A
         )
         with patch(
             "backend.app.document_processing.report_extractor.extract_pdf_ocr",
             return_value=make_ocr_result(*page_texts),
         ):
             scanned = await process_report(
-                make_upload("scan.pdf", "application/pdf", make_pdf("", "", ""))
+                make_upload("scan.pdf", "application/pdf", make_pdf("", "", "")),
+                USER_A,
             )
 
         self.assertEqual(direct.biomarkers, scanned.biomarkers)
@@ -167,14 +171,16 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
     async def test_corrupted_pdf_is_rejected(self) -> None:
         with self.assertRaises(HTTPException) as context:
             await process_report(
-                make_upload("corrupted.pdf", "application/pdf", b"not a PDF")
+                make_upload("corrupted.pdf", "application/pdf", b"not a PDF"), USER_A
             )
 
         self.assertEqual(context.exception.status_code, 422)
 
     async def test_non_pdf_is_rejected(self) -> None:
         with self.assertRaises(HTTPException) as context:
-            await process_report(make_upload("report.png", "image/png", b"image"))
+            await process_report(
+                make_upload("report.png", "image/png", b"image"), USER_A
+            )
 
         self.assertEqual(context.exception.status_code, 415)
 
@@ -183,7 +189,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(HTTPException) as context:
             await process_report(
-                make_upload("large.pdf", "application/pdf", content)
+                make_upload("large.pdf", "application/pdf", content), USER_A
             )
 
         self.assertEqual(context.exception.status_code, 413)
@@ -192,7 +198,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
         content = make_pdf("Synthetic report text for upload validation.")
 
         response = await upload_report(
-            make_upload("report.pdf", "application/pdf", content)
+            make_upload("report.pdf", "application/pdf", content), USER_A
         )
 
         self.assertEqual(response.status, "accepted")
@@ -201,7 +207,7 @@ class IntegratedReportProcessingTests(unittest.IsolatedAsyncioTestCase):
         text = "Synthetic machine-readable laboratory report text."
 
         response = await extract_report(
-            make_upload("report.pdf", "application/pdf", make_pdf(text))
+            make_upload("report.pdf", "application/pdf", make_pdf(text)), USER_A
         )
 
         self.assertIn(text, response.text)
