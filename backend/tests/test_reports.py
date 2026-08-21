@@ -6,6 +6,7 @@ from starlette.datastructures import Headers
 
 from backend.app.api.routes.reports import MAX_UPLOAD_SIZE_BYTES, upload_report
 from backend.app.main import app, health_check
+from backend.tests.auth_helpers import USER_A
 
 
 def make_upload(filename: str, content_type: str, content: bytes) -> UploadFile:
@@ -21,7 +22,7 @@ class ReportUploadTests(unittest.IsolatedAsyncioTestCase):
         content = b"%PDF-1.4 test report"
 
         response = await upload_report(
-            make_upload("blood_report.pdf", "application/pdf", content)
+            make_upload("blood_report.pdf", "application/pdf", content), USER_A
         )
 
         self.assertEqual(response.filename, "blood_report.pdf")
@@ -38,7 +39,7 @@ class ReportUploadTests(unittest.IsolatedAsyncioTestCase):
         for filename, content_type, content in cases:
             with self.subTest(content_type=content_type):
                 response = await upload_report(
-                    make_upload(filename, content_type, content)
+                    make_upload(filename, content_type, content), USER_A
                 )
 
                 self.assertEqual(response.filename, filename)
@@ -48,7 +49,9 @@ class ReportUploadTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_unsupported_file_type_is_rejected(self) -> None:
         with self.assertRaises(HTTPException) as context:
-            await upload_report(make_upload("notes.txt", "text/plain", b"notes"))
+            await upload_report(
+                make_upload("notes.txt", "text/plain", b"notes"), USER_A
+            )
 
         self.assertEqual(context.exception.status_code, 415)
         self.assertIn("Unsupported file type", context.exception.detail)
@@ -58,7 +61,7 @@ class ReportUploadTests(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(HTTPException) as context:
             await upload_report(
-                make_upload("large-report.pdf", "application/pdf", content)
+                make_upload("large-report.pdf", "application/pdf", content), USER_A
             )
 
         self.assertEqual(context.exception.status_code, 413)
