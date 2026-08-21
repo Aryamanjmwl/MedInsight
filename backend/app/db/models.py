@@ -78,6 +78,10 @@ class BiomarkerResult(Base):
     raw_reference: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     source_text: Mapped[str] = mapped_column(Text, nullable=False)
+    # Report-derived values can be corrected by the owner without losing their
+    # provenance. The original PDF is not persisted, so this flag makes the
+    # correction explicit anywhere the structured measurement is displayed.
+    user_edited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     report: Mapped[Report | None] = relationship(back_populates="biomarkers")
 
