@@ -9,4 +9,5 @@ pytesseract==0.3.13
 python-multipart==0.0.32
 PyJWT[crypto]==2.13.0
 SQLAlchemy==2.0.51
+supabase==2.31.0
 uvicorn==0.52.3

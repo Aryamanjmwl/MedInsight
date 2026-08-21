@@ -21,6 +21,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
+  clearLocalSession: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -91,6 +92,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (error) throw error;
   }, []);
 
+  const clearLocalSession = useCallback(async () => {
+    const { error } = await getSupabaseClient().auth.signOut({ scope: 'local' });
+    if (error) throw error;
+  }, []);
+
   const value = useMemo(
     () => ({
       session,
@@ -100,8 +106,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signUp,
       signOut,
+      clearLocalSession,
     }),
-    [configurationError, loading, session, signIn, signOut, signUp],
+    [clearLocalSession, configurationError, loading, session, signIn, signOut, signUp],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
