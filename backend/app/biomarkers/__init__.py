@@ -12,6 +12,7 @@ from .manual import (
     ManualMeasurementCreate,
     ManualMeasurementDeleteResponse,
     ManualMeasurementResponse,
+    ManualMeasurementUpdate,
     format_manual_reference,
 )
 from .vocabulary import BIOMARKERS, BiomarkerDefinition
@@ -25,6 +26,7 @@ __all__ = [
     "ManualMeasurementCreate",
     "ManualMeasurementDeleteResponse",
     "ManualMeasurementResponse",
+    "ManualMeasurementUpdate",
     "BiomarkerDefinition",
     "BIOMARKERS",
     "ReferenceOperator",
