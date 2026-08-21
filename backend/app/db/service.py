@@ -87,7 +87,9 @@ def save_processed_report(
                 reference_operator=biomarker.reference_operator,
                 raw_reference=biomarker.raw_reference,
                 status=biomarker.status.value,
-                source_text=biomarker.source_text,
+                # Parser source lines are useful during extraction but are not
+                # required for longitudinal features. Do not persist report text.
+                source_text="",
             )
             for biomarker in biomarkers
         ],

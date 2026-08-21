@@ -13,7 +13,6 @@ For an authenticated user, MedInsight may retain:
 - the Supabase authentication identity needed to sign in;
 - report metadata such as filename, upload time, page count, character count, and whether OCR was required;
 - structured laboratory measurements such as biomarker name, value, unit, report-supplied reference information, status, and measurement date;
-- a small source-text excerpt associated with an extracted measurement so the structured result can retain extraction provenance;
 - manually entered laboratory measurements and their provenance.
 
 Each application-created report and measurement is associated with the authenticated user's UUID.
@@ -25,10 +24,13 @@ The application does not intentionally persist:
 - original uploaded PDF files;
 - rendered OCR page images;
 - the complete extracted or OCR text of a report;
+- report source-line excerpts after the structured measurement has been saved;
 - AI prompts or AI responses in the MedInsight database;
 - Groq API credentials, database passwords, or Supabase secret keys in the client application.
 
-Uploaded report bytes are processed by the backend for the duration required to extract structured information and are not written to MedInsight's persistent application storage.
+Uploaded report bytes and parser source lines are processed by the backend only for the duration required to extract and validate structured information. The persistence layer stores the structured measurement fields needed by longitudinal product features and intentionally clears the source-text field instead of retaining report text.
+
+A database migration also clears source-text excerpts that may have been stored by earlier MedInsight versions. This removal is intentionally irreversible.
 
 ## Why data is processed
 
@@ -89,7 +91,7 @@ The current design includes, among other controls:
 - PostgreSQL Row Level Security;
 - explicit CORS origins rather than a wildcard;
 - server-only provider and database credentials;
-- no persistent storage of uploaded report files;
+- no persistent storage of uploaded report files or report source-line excerpts;
 - bounded file size and OCR limits;
 - deterministic health-data extraction and classification;
 - privacy-minimized AI context.

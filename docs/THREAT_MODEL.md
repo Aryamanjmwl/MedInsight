@@ -10,12 +10,11 @@ The highest-value assets are:
 
 - authenticated user identities and sessions;
 - structured laboratory measurements and report metadata;
-- short source-text provenance excerpts;
 - database credentials and Supabase administrative credentials;
 - Groq API credentials;
 - integrity of deterministic classification, trend, and doctor-brief outputs.
 
-Original uploaded report files and complete extracted/OCR report text are intentionally not persisted by the application.
+Original uploaded report files, complete extracted/OCR report text, and parser source-line excerpts are intentionally not persisted by the application.
 
 ## Trust boundaries
 
@@ -46,7 +45,7 @@ Original uploaded report files and complete extracted/OCR report text are intent
 **Controls:**
 - application queries always include the authenticated user UUID;
 - RLS policies provide defense in depth for owned rows;
-- owner-only manual-measurement deletion;
+- owner-only manual-measurement edit and deletion;
 - user-isolation tests.
 
 ### Malicious or oversized report uploads
@@ -59,7 +58,7 @@ Original uploaded report files and complete extracted/OCR report text are intent
 - bounded OCR page count and per-page timeout;
 - server-side parsing only;
 - authenticated report-processing rate limits;
-- original files not persisted.
+- original files and parser source-line excerpts not persisted.
 
 **Residual risk:** third-party PDF/OCR libraries can contain vulnerabilities. Dependencies require ongoing monitoring.
 
@@ -100,11 +99,13 @@ Original uploaded report files and complete extracted/OCR report text are intent
 - Dependabot and CI validation;
 - public repository secret audits should be repeated periodically.
 
-### Sensitive data in logs or caches
+### Sensitive data in logs, persistence, or caches
 
-**Threat:** report content, tokens, user identity, or medical values appear in logs or browser/proxy caches.
+**Threat:** report content, tokens, user identity, or medical values appear in logs, persistent application storage, or browser/proxy caches beyond what is required for product functionality.
 
 **Controls:**
+- report persistence stores structured measurement fields instead of report source lines;
+- a database migration clears source-text excerpts retained by earlier versions;
 - security audit events use a pseudonymous user reference;
 - audit events intentionally omit email, tokens, report names, biomarker names, and values;
 - API responses receive `Cache-Control: no-store` and related security headers;
