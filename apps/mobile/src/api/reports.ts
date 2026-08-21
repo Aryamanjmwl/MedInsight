@@ -1,5 +1,5 @@
-import { getJson, postFormData } from '@/api/client';
-import type { ProcessAndSaveReportResponse, SavedReportDetail, SavedReportSummary } from '@/api/types';
+import { deleteJson, getJson, postFormData, putJsonBody } from '@/api/client';
+import type { ProcessAndSaveReportResponse, ReportDeleteResponse, ReportRenameRequest, SavedReportDetail, SavedReportSummary } from '@/api/types';
 
 export type ReportUploadFile = {
   uri: string;
@@ -14,6 +14,14 @@ export function getReports() {
 
 export function getReport(reportId: number) {
   return getJson<SavedReportDetail>(`/reports/${encodeURIComponent(String(reportId))}`);
+}
+
+export function renameReport(reportId: number, payload: ReportRenameRequest) {
+  return putJsonBody<SavedReportSummary>(`/reports/${encodeURIComponent(String(reportId))}`, payload);
+}
+
+export function deleteReport(reportId: number) {
+  return deleteJson<ReportDeleteResponse>(`/reports/${encodeURIComponent(String(reportId))}`);
 }
 
 export function processAndSaveReport(file: ReportUploadFile) {
