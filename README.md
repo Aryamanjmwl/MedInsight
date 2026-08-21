@@ -18,7 +18,7 @@ Core capabilities include:
 - Deterministic extraction of supported biomarkers, values, units, and report-provided reference ranges
 - Low / normal / high classification using only the reference information supplied by the report
 - Longitudinal biomarker history and trend views
-- Manual entry of individual laboratory measurements without creating a fake report
+- Manual entry, editing, and deletion of individual laboratory measurements without creating a fake report
 - A chronological health-history timeline
 - A deterministic doctor-visit brief built from saved structured results
 - Optional AI explanations for a single biomarker using a privacy-minimized structured context
@@ -153,13 +153,13 @@ Manual and report-derived measurements share the same longitudinal biomarker his
 
 Reference information is optional. If a reference is supplied, MedInsight reuses its deterministic classifier; if no reference is supplied, the measurement remains **Not classified**.
 
-Manual measurements can be deleted by their owner. Editing is currently handled as delete-and-readd rather than an in-place edit flow.
+Manual measurements can be edited or deleted individually by their owner. Editing can correct the saved value, unit, measurement date, and standard reference range; status is recalculated server-side after the change. The biomarker identity itself remains immutable during editing so the longitudinal record does not silently change analyte provenance. Report-derived measurements remain read-only through the manual-measurement API.
 
 ## Trends and dashboard
 
 The dashboard and biomarker history use the effective measurement date:
 
-- report-derived results use the report date
+- report-derived results use the stored report/upload timestamp
 - manual measurements use their explicit measurement date
 
 Trends are calculated only across comparable units. Mixed-unit histories are intentionally treated as non-comparable rather than converted automatically.
@@ -332,7 +332,6 @@ Current limitations include:
 - The deterministic parser supports a curated set of biomarkers and common report structures, not every laboratory format.
 - OCR can fail on poor-quality scans or unusual layouts.
 - No unit conversion is performed.
-- Manual measurement editing is currently delete-and-readd.
 - AI explanations can contain errors and remain optional educational context.
 - Public account-confirmation email delivery is still being configured for unrestricted signup.
 - Native Android, iOS, and Windows installers are not released yet.
