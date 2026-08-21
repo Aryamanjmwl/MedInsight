@@ -197,6 +197,22 @@ export function postJsonBody<T>(
   );
 }
 
+export function putJsonBody<T>(
+  endpoint: string,
+  body: unknown,
+  fetchImplementation: FetchImplementation = globalThis.fetch,
+) {
+  return requestJson<T>(
+    endpoint,
+    {
+      method: 'PUT',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    fetchImplementation,
+  );
+}
+
 export function deleteJson<T>(
   endpoint: string,
   fetchImplementation: FetchImplementation = globalThis.fetch,
