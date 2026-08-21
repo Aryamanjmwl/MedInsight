@@ -167,6 +167,15 @@ export interface ManualMeasurementCreate {
   reference_operator: ReferenceOperator | null;
 }
 
+export interface ManualMeasurementUpdate {
+  value: number;
+  unit: string;
+  measurement_date: string;
+  reference_low: number | null;
+  reference_high: number | null;
+  reference_operator: ReferenceOperator | null;
+}
+
 export interface ManualMeasurementResponse {
   measurement_id: number;
   normalized_name: string;
