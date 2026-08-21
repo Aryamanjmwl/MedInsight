@@ -24,6 +24,7 @@ class BiomarkerHistoryRecord:
     raw_reference: str
     measurement_id: int = 0
     source: str = MeasurementSource.REPORT.value
+    user_edited: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,9 +88,8 @@ def save_processed_report(
                 reference_operator=biomarker.reference_operator,
                 raw_reference=biomarker.raw_reference,
                 status=biomarker.status.value,
-                # Parser source lines are useful during extraction but are not
-                # required for longitudinal features. Do not persist report text.
                 source_text="",
+                user_edited=False,
             )
             for biomarker in biomarkers
         ],
@@ -136,6 +136,7 @@ def save_manual_measurement(
         raw_reference=raw_reference,
         status=status.value,
         source_text="",
+        user_edited=False,
     )
     try:
         session.add(measurement)
@@ -178,6 +179,55 @@ def update_manual_measurement(
     measurement.reference_operator = reference_operator
     measurement.raw_reference = raw_reference
     measurement.status = status.value
+    measurement.user_edited = True
+
+    try:
+        session.commit()
+        session.refresh(measurement)
+    except SQLAlchemyError:
+        session.rollback()
+        raise
+    return measurement
+
+
+def update_saved_measurement(
+    session: Session,
+    *,
+    user_id: UUID,
+    measurement_id: int,
+    value: float,
+    unit: str,
+    measured_at: datetime,
+    reference_low: float | None,
+    reference_high: float | None,
+    reference_operator: ReferenceOperator | None,
+    raw_reference: str,
+    status: BiomarkerStatus,
+) -> BiomarkerResult | None:
+    """Update an owned structured measurement without changing its provenance.
+
+    Manual entries may change their measurement date. Report-derived entries keep
+    the report date because the saved report remains the source of that timeline
+    event. Any edit is explicitly marked as user-corrected.
+    """
+    statement = select(BiomarkerResult).where(
+        BiomarkerResult.id == measurement_id,
+        BiomarkerResult.user_id == user_id,
+    )
+    measurement = session.scalar(statement)
+    if measurement is None:
+        return None
+
+    measurement.value = value
+    measurement.unit = unit
+    if measurement.source == MeasurementSource.MANUAL.value:
+        measurement.measured_at = measured_at
+    measurement.reference_low = reference_low
+    measurement.reference_high = reference_high
+    measurement.reference_operator = reference_operator
+    measurement.raw_reference = raw_reference
+    measurement.status = status.value
+    measurement.user_edited = True
 
     try:
         session.commit()
@@ -212,6 +262,29 @@ def delete_manual_measurement(
     return True
 
 
+def delete_saved_measurement(
+    session: Session,
+    *,
+    user_id: UUID,
+    measurement_id: int,
+) -> bool:
+    statement = select(BiomarkerResult).where(
+        BiomarkerResult.id == measurement_id,
+        BiomarkerResult.user_id == user_id,
+    )
+    measurement = session.scalar(statement)
+    if measurement is None:
+        return False
+
+    try:
+        session.delete(measurement)
+        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+        raise
+    return True
+
+
 def list_saved_reports(session: Session, user_id: UUID) -> Sequence[Report]:
     statement = (
         select(Report)
@@ -229,6 +302,45 @@ def get_saved_report(session: Session, user_id: UUID, report_id: int) -> Report 
         .options(selectinload(Report.biomarkers))
     )
     return session.scalar(statement)
+
+
+def rename_saved_report(
+    session: Session,
+    *,
+    user_id: UUID,
+    report_id: int,
+    filename: str,
+) -> Report | None:
+    report = get_saved_report(session, user_id, report_id)
+    if report is None:
+        return None
+    report.filename = filename
+    try:
+        session.commit()
+        session.refresh(report)
+    except SQLAlchemyError:
+        session.rollback()
+        raise
+    return report
+
+
+def delete_saved_report(
+    session: Session,
+    *,
+    user_id: UUID,
+    report_id: int,
+) -> int | None:
+    report = get_saved_report(session, user_id, report_id)
+    if report is None:
+        return None
+    measurement_count = len(report.biomarkers)
+    try:
+        session.delete(report)
+        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+        raise
+    return measurement_count
 
 
 def get_biomarker_history(
@@ -267,6 +379,7 @@ def get_biomarker_history(
             reference_high=biomarker.reference_high,
             reference_operator=biomarker.reference_operator,
             raw_reference=biomarker.raw_reference,
+            user_edited=biomarker.user_edited,
         )
         for biomarker, uploaded_at in rows
     ]
