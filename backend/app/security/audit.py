@@ -5,6 +5,7 @@ from uuid import UUID
 
 
 logger = logging.getLogger("medinsight.security")
+logger.setLevel(logging.INFO)
 
 
 def _user_reference(user_id: UUID) -> str:
