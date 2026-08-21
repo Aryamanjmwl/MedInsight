@@ -1,4 +1,4 @@
-import { deleteJson, getJson, postJson, postJsonBody } from '@/api/client';
+import { deleteJson, getJson, postJson, postJsonBody, putJsonBody } from '@/api/client';
 import type {
   BiomarkerExplanation,
   BiomarkerHistoryResponse,
@@ -6,6 +6,7 @@ import type {
   ManualMeasurementCreate,
   ManualMeasurementDeleteResponse,
   ManualMeasurementResponse,
+  ManualMeasurementUpdate,
   SupportedBiomarker,
   TrendResult,
 } from '@/api/types';
@@ -24,6 +25,10 @@ export function getSupportedBiomarkers() {
 
 export function createManualMeasurement(payload: ManualMeasurementCreate) {
   return postJsonBody<ManualMeasurementResponse>('/biomarkers/manual', payload);
+}
+
+export function updateManualMeasurement(measurementId: number, payload: ManualMeasurementUpdate) {
+  return putJsonBody<ManualMeasurementResponse>(`/biomarkers/manual/${measurementId}`, payload);
 }
 
 export function deleteManualMeasurement(measurementId: number) {
