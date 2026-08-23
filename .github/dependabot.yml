@@ -15,6 +15,20 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # React Native 0.x minor releases are framework-level upgrades. Stay on
+      # the Expo SDK 57-compatible 0.86 line until the Expo/Reanimated stack is
+      # upgraded together and validated intentionally.
+      - dependency-name: "react-native"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+
+      # TypeScript major upgrades can change compiler behavior and Expo tooling
+      # compatibility. Keep Dependabot on the current major; upgrade explicitly.
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
     groups:
       expo-client-dependencies:
         patterns:
