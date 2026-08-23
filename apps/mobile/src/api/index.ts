@@ -1,8 +1,8 @@
 export { ApiError } from '@/api/client';
-export { createManualMeasurement, deleteManualMeasurement, explainBiomarker, getBiomarkerHistory, getBiomarkers, getBiomarkerTrend, getSupportedBiomarkers, updateManualMeasurement } from '@/api/biomarkers';
+export { createManualMeasurement, deleteManualMeasurement, deleteSavedMeasurement, explainBiomarker, getBiomarkerHistory, getBiomarkers, getBiomarkerTrend, getSupportedBiomarkers, updateManualMeasurement, updateSavedMeasurement } from '@/api/biomarkers';
 export { getDashboardSummary } from '@/api/dashboard';
 export { getDoctorVisitBrief } from '@/api/doctor-brief';
-export { getReport, getReports, processAndSaveReport } from '@/api/reports';
+export { deleteReport, getReport, getReports, processAndSaveReport, renameReport } from '@/api/reports';
 export type { ReportUploadFile } from '@/api/reports';
 
 export type {
@@ -24,7 +24,9 @@ export type {
   IsoDateTime,
   ReferenceOperator,
   ProcessAndSaveReportResponse,
+  ReportDeleteResponse,
   ReportProcessingResult,
+  ReportRenameRequest,
   SavedReportDetail,
   SavedReportSummary,
   TrendDirection,

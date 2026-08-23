@@ -35,6 +35,14 @@ export function deleteManualMeasurement(measurementId: number) {
   return deleteJson<ManualMeasurementDeleteResponse>(`/biomarkers/manual/${measurementId}`);
 }
 
+export function updateSavedMeasurement(measurementId: number, payload: ManualMeasurementUpdate) {
+  return putJsonBody<ManualMeasurementResponse>(`/biomarkers/measurements/${measurementId}`, payload);
+}
+
+export function deleteSavedMeasurement(measurementId: number) {
+  return deleteJson<ManualMeasurementDeleteResponse>(`/biomarkers/measurements/${measurementId}`);
+}
+
 export function getBiomarkerHistory(normalizedName: string) {
   return getJson<BiomarkerHistoryResponse>(biomarkerEndpoint(normalizedName, 'history'));
 }

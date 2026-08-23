@@ -3,7 +3,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput,
 
 import {
   ApiError,
-  updateManualMeasurement,
+  updateSavedMeasurement,
   type BiomarkerHistoryItem,
   type ManualMeasurementUpdate,
 } from '@/api';
@@ -71,6 +71,8 @@ export function ManualMeasurementEditDialog({
 
   if (!measurement || !form) return null;
 
+  const reportDerived = measurement.source === 'report';
+
   const update = (field: keyof ManualMeasurementForm, value: string) => {
     setForm((current) => current ? { ...current, [field]: value } : current);
     setErrors((current) => ({ ...current, [field]: undefined }));
@@ -101,14 +103,14 @@ export function ManualMeasurementEditDialog({
     setSaving(true);
     setRequestError(null);
     try {
-      await updateManualMeasurement(measurement.measurement_id, payload);
+      await updateSavedMeasurement(measurement.measurement_id, payload);
       invalidateHealthData();
       onClose();
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setRequestError('Your session has expired. Please sign in again.');
       } else if (error instanceof ApiError && error.status === 404) {
-        setRequestError('This manual measurement is no longer available.');
+        setRequestError('This measurement is no longer available.');
       } else if (error instanceof ApiError && error.status === 422) {
         setRequestError(error.message || 'Review the measurement details and try again.');
       } else if (error instanceof ApiError) {
@@ -131,9 +133,13 @@ export function ManualMeasurementEditDialog({
         <View accessibilityViewIsModal style={styles.dialog}>
           <View style={styles.header}>
             <View style={styles.titleBlock}>
-              <AppText variant="metadata" color="textMuted">Manual Measurement</AppText>
+              <AppText variant="metadata" color="textMuted">{reportDerived ? 'REPORT MEASUREMENT' : 'MANUAL MEASUREMENT'}</AppText>
               <AppText variant="title">Edit {biomarkerName}</AppText>
-              <AppText color="textSecondary">Correct the saved value, unit, date, or reference information.</AppText>
+              <AppText color="textSecondary">
+                {reportDerived
+                  ? 'Correct the structured value saved from this report. The correction will be marked as user edited.'
+                  : 'Correct the saved value, unit, date, or reference information.'}
+              </AppText>
             </View>
             {!saving ? (
               <Pressable accessibilityRole="button" accessibilityLabel="Close measurement editor" onPress={close} style={({ pressed, hovered }) => [styles.close, (pressed || hovered) && styles.active]}>
@@ -148,7 +154,11 @@ export function ManualMeasurementEditDialog({
                 <AppText variant="metadata" color="textFaint">Biomarker</AppText>
                 <AppText variant="label" color="textSecondary">{biomarkerName}</AppText>
               </View>
-              <AppText variant="caption" color="textMuted">The biomarker itself cannot be changed during editing so the measurement keeps its original provenance. Delete and re-add it if the wrong biomarker was selected.</AppText>
+              <AppText variant="caption" color="textMuted">
+                {reportDerived
+                  ? 'The report association and report date stay unchanged. MedInsight records that the structured result was corrected by the account owner.'
+                  : 'The biomarker itself cannot be changed during editing. Delete and re-add it if the wrong biomarker was selected.'}
+              </AppText>
             </View>
 
             <View style={styles.fieldRow}>
@@ -156,12 +166,20 @@ export function ManualMeasurementEditDialog({
               <TextField label="Unit" required value={form.unit} onChangeText={(value) => update('unit', value)} error={errors.unit} placeholder="g/dL" autoCapitalize="none" />
             </View>
 
-            <TextField label="Measurement date" required value={form.measurementDate} onChangeText={(value) => update('measurementDate', value)} error={errors.measurementDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+            {reportDerived ? (
+              <View style={styles.lockedField}>
+                <AppText variant="label" color="textSecondary">Report date</AppText>
+                <AppText variant="bodyStrong">{form.measurementDate}</AppText>
+                <AppText variant="caption" color="textMuted">The date stays tied to the saved report.</AppText>
+              </View>
+            ) : (
+              <TextField label="Measurement date" required value={form.measurementDate} onChangeText={(value) => update('measurementDate', value)} error={errors.measurementDate} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+            )}
 
             <View style={styles.referenceSection}>
               <View style={styles.referenceHeading}>
                 <AppText variant="label">Reference information</AppText>
-                <AppText variant="caption" color="textMuted">Reference values are optional and are used only to recalculate the saved low / normal / high status.</AppText>
+                <AppText variant="caption" color="textMuted">Reference values are used only to recalculate the saved low / normal / high status.</AppText>
               </View>
 
               {measurement.reference_operator ? (
@@ -234,6 +252,7 @@ const styles = StyleSheet.create({
   fieldRow: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: spacing.md },
   input: { minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radii.sm, backgroundColor: colors.surfaceSubtle, color: colors.textPrimary, fontSize: typography.body.fontSize },
   inputError: { borderColor: colors.statusHigh },
+  lockedField: { gap: spacing.xs, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radii.sm, backgroundColor: colors.surfaceSubtle },
   referenceSection: { gap: spacing.md, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border },
   referenceHeading: { gap: spacing.xs },
   preservedReference: { gap: spacing.xs, padding: spacing.md, backgroundColor: colors.surfaceSubtle },
