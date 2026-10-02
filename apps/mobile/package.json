@@ -4,24 +4,24 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
-    "@supabase/supabase-js": "2.112.4",
-    "expo": "~57.0.19",
+    "@supabase/supabase-js": "2.117.2",
+    "expo": "~57.0.26",
     "expo-constants": "~57.0.12",
-    "expo-document-picker": "~57.0.1",
-    "expo-linking": "~57.0.9",
-    "expo-router": "~57.0.18",
-    "expo-secure-store": "~57.0.3",
+    "expo-document-picker": "~57.0.3",
+    "expo-linking": "~57.0.11",
+    "expo-router": "~57.0.24",
+    "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-native": "0.86.3",
-    "react-native-safe-area-context": "~5.9.1",
-    "react-native-screens": "~4.27.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.28.0",
     "react-native-url-polyfill": "4.0.0",
-    "react-native-web": "~0.21.0"
+    "react-native-web": "~0.21.3"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
+    "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
